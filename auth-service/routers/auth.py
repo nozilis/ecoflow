@@ -1,6 +1,35 @@
 from fastapi import APIRouter
+from sqlalchemy.exc import IntegrityError
+from fastapi import HTTPException, status, Depends
+from schemas import UserCreate, UserResponse
+from dependencies import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
+from passlib.hash import bcrypt
+from models import User
+from sqlalchemy import select, or_
 
 router = APIRouter(
     prefix='/auth',
     tags=['auth']
 )
+
+@router.post('/register', status_code=status.HTTP_201_CREATED)
+async def register_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
+    hashed_password = bcrypt.hash(user.password)
+    db_user_is_exist_check = await db.execute(select(User).where(or_(User.username == user.username, User.email == user.email)))
+    user_is_exist_check = db_user_is_exist_check.scalar_one_or_none()
+    if not user_is_exist_check:
+        create_user = User(username = user.username, hashed_password = hashed_password, email = user.email)
+        try:
+            db.add(create_user)
+            await db.commit()
+            return UserResponse.model_validate(create_user)
+        except IntegrityError as e:
+            pg_code = e.orig.diag.message_detail
+            await db.rollback()
+            print(f'{pg_code}')
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'Username or email is already taken')
+    elif user_is_exist_check.username == user.username:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'Username is already taken')
+    else:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'Email is already taken')
