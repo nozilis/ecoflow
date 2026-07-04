@@ -1,12 +1,13 @@
 from fastapi import APIRouter
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status, Depends
-from schemas import UserCreate, UserResponse
+from schemas import UserCreate, UserResponse, UserLogin
 from dependencies import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from passlib.hash import bcrypt
 from models import User
 from sqlalchemy import select, or_
+from jwt_token import create_access_token
 
 router = APIRouter(
     prefix='/auth',
@@ -33,3 +34,14 @@ async def register_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'Username is already taken')
     else:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'Email is already taken')
+
+@router.post('/login', status_code=status.HTTP_200_OK)
+async def login_user(user: UserLogin, db: AsyncSession = Depends(get_db)):
+    user_is_exist = await db.execute(select(User).where(User.username == user.username))
+    db_user = user_is_exist.scalar_one_or_none()
+    if db_user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid username or password')
+    elif bcrypt.verify(user.password, db_user.hashed_password):
+        return create_access_token({'sub': str(db_user.id)})
+    else:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid username or password')
