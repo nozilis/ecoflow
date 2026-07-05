@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status, Depends
 from schemas import UserCreate, UserResponse, UserLogin
-from dependencies import get_db
+from dependencies import get_db, get_current_user
 from sqlalchemy.ext.asyncio import AsyncSession
 from passlib.hash import bcrypt
 from models import User
@@ -45,3 +45,7 @@ async def login_user(user: UserLogin, db: AsyncSession = Depends(get_db)):
         return create_access_token({'sub': str(db_user.id)})
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid username or password')
+    
+@router.get('/whoami', status_code=status.HTTP_200_OK)
+async def check_user(user: User = Depends(get_current_user)):
+    return UserResponse.model_validate(user)
