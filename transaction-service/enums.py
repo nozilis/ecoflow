@@ -1,0 +1,30 @@
+from enum import StrEnum
+
+class ExpenseCategory(StrEnum):
+    RESTAURANT = 'restaurant'
+    PRODUCTS = 'products'
+    TRANSPORT = 'transport'
+    TRAVEL = 'travel'
+    TAXES = 'taxes'
+    HEALTHCARE = 'healthcare'
+    HOUSEHOLD = 'household'
+    ENTERTAINMENT = 'entertainment'
+    PERSONAL_CARE = 'personal care'
+    HOBBY = 'hobby'
+    SPORT = 'sport'
+    CLOTHES = 'clothes'
+    PETS = 'pets'
+    TRANSFERS = 'transfers'
+    INSURANCE = 'insurance'
+    CREDIT = 'credit'
+    DEBTS = 'debts'
+    INVESTMENTS = 'investments'
+    SUBSCRIPTIONS = 'subscriptions'
+    GIFTS = 'gifts'
+    OTHER = 'other'
+
+class IncomeCategory(StrEnum):
+    SALARY = 'salary'
+    TRANSFERS = 'transfers'
+    REFUND = 'refund'
+    OTHER = 'other'
