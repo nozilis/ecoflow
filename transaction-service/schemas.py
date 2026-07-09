@@ -1,6 +1,7 @@
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, model_validator, ConfigDict
 from typing import Optional, Self
 from enums import TransactionType, ExpenseCategory, IncomeCategory
+from datetime import datetime
 
 class TransactionCreate(BaseModel):
     amount: int
@@ -17,3 +18,13 @@ class TransactionCreate(BaseModel):
             if self.category not in IncomeCategory:
                 raise ValueError('Категория транзакции заполнена неверно!')
         return self
+    
+class TransactionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    amount: int
+    transaction_type: TransactionType
+    category: ExpenseCategory | IncomeCategory
+    description: Optional[str] = None
+    created_at: datetime
