@@ -32,3 +32,11 @@ class IncomeCategory(StrEnum):
 class TransactionType(StrEnum):
     EXPENSE = 'Expense'
     INCOME = 'Income'
+
+def GeneralCategories():
+    category_pairs = set()
+    for expense_item in ExpenseCategory:
+        category_pairs.add((expense_item.name, expense_item.value))
+    for income_item in IncomeCategory:
+        category_pairs.add((income_item.name, income_item.value))
+    return StrEnum('Categories', list(category_pairs))
