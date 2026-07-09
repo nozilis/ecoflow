@@ -2,6 +2,13 @@ from jose import jwt, JWTError
 from fastapi import HTTPException, status, Depends
 from decouple import config
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import AsyncGenerator
+from database import async_session_maker
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]: 
+    async with async_session_maker() as session:
+        yield session
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
