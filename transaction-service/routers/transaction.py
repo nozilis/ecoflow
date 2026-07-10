@@ -22,3 +22,12 @@ async def get_transactions(user_id: int = Depends(get_current_user), db: AsyncSe
     result = await db.execute(select(Transaction).where(Transaction.user_id == user_id).limit(page_size).offset((page-1)*page_size))
     db_transactions = result.scalars().all()
     return [TransactionResponse.model_validate(t) for t in db_transactions]
+
+@router.delete('/{transaction_id}', status_code=status.HTTP_204_NO_CONTENT)
+async def delete_transaction(transaction_id: int, user_id: int = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    db_transaction_is_exist = await db.execute(select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == user_id)) 
+    db_transaction = db_transaction_is_exist.scalar_one_or_none()
+    if not db_transaction:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Транзакция не найдена')
+    await db.delete(db_transaction)
+    await db.commit()
