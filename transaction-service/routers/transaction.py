@@ -10,7 +10,7 @@ router = APIRouter(
     tags=['transactions']
 )
 
-@router.post('/create', status_code=status.HTTP_201_CREATED)
+@router.post('/', status_code=status.HTTP_201_CREATED)
 async def create_transaction(transaction: TransactionCreate, user_id: int = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     to_db_transaction = Transaction(user_id = user_id, amount = transaction.amount, transaction_type = transaction.transaction_type, category = transaction.category, description = transaction.description)
     db.add(to_db_transaction)
