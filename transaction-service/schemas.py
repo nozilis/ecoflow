@@ -28,3 +28,9 @@ class TransactionResponse(BaseModel):
     category: ExpenseCategory | IncomeCategory
     description: Optional[str] = None
     created_at: datetime
+
+class TransactionUpdate(BaseModel):
+    amount: Optional[int] = None
+    transaction_type: Optional[TransactionType] = None
+    category: Optional[ExpenseCategory | IncomeCategory] = None
+    description: Optional[str] = None
