@@ -1,0 +1,45 @@
+services:
+  auth_service:
+    build: ./auth-service
+    env_file: 
+    - ./auth-service/.env.docker
+    volumes:
+      - ./auth-service:/code
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres_auth
+  transaction_service:
+    build: ./transaction-service
+    env_file: 
+    - ./transaction-service/.env.docker
+    volumes:
+      - ./transaction-service:/code
+    ports:
+      - "8001:8000"
+    depends_on:
+      - postgres_transaction
+  postgres_auth:
+    image: postgres:16-alpine
+    container_name: ecoflow_auth_postgres_db
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+    env_file: 
+      - ./auth-service/.env
+  postgres_transaction:
+    image: postgres:16-alpine
+    container_name: ecoflow_transaction_postgres_db
+    restart: always
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_transaction_data:/var/lib/postgresql/data
+    env_file: 
+      - ./transaction-service/.env
+
+volumes:
+  postgres_auth_data:
+  postgres_transaction_data:
