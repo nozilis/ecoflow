@@ -7,7 +7,7 @@ class Base(DeclarativeBase):
     pass
 
 class MonthlyStats(Base):
-    __tablename__ = 'MonthlyStats'
+    __tablename__ = 'monthly_stats'
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(Integer)
