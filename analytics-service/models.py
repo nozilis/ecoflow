@@ -17,4 +17,4 @@ class MonthlyStats(Base):
     transaction_type: Mapped[str] = mapped_column(String(25))
     total_amount: Mapped[int] = mapped_column(Integer)
     
-    __table_args__ = (UniqueConstraint('user_id', 'year', 'month', 'category', name='month_category_agregation'))
+    __table_args__ = (UniqueConstraint('user_id', 'year', 'month', 'category', name='month_category_agregation'), )
