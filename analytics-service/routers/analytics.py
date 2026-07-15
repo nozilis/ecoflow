@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status, Depends
 from dependencies import get_db, get_current_user
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from models import MonthlyStats
 from schemas import MonthlyStatsResponse
 from datetime import datetime
@@ -19,5 +19,5 @@ async def get_monthly_stats(month: int = None, year: int = None, db: AsyncSessio
     if year is None:
         year = now.year
     result = await db.execute(select(MonthlyStats).where(MonthlyStats.user_id == user, MonthlyStats.month == month, MonthlyStats.year == year))
-    db_stats = result.scalars().all()
-    return [MonthlyStatsResponse.model_validate(s) for s in db_stats]
+    db_monthly_stats = result.scalars().all()
+    return [MonthlyStatsResponse.model_validate(s) for s in db_monthly_stats]
