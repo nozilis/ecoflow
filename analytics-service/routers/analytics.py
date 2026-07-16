@@ -3,7 +3,7 @@ from dependencies import get_db, get_current_user
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from models import MonthlyStats
-from schemas import MonthlyStatsResponse, YearlyStatsResponse
+from schemas import MonthlyStatsResponse, YearlyStatsResponse, RangeStatsResponse
 from datetime import datetime
 
 router = APIRouter(
@@ -29,3 +29,17 @@ async def get_yearly_stats(year: int = None, db: AsyncSession = Depends(get_db),
         year = now.year
     db_yearly_stats = await db.execute(select(MonthlyStats.year, MonthlyStats.category, func.sum(MonthlyStats.total_amount).label('total_year_amount')).where(MonthlyStats.year == year, MonthlyStats.user_id == user).group_by(MonthlyStats.year, MonthlyStats.category))
     return [YearlyStatsResponse.model_validate(row) for row in db_yearly_stats.mappings().all()]
+
+@router.get('/range_stats', status_code=status.HTTP_200_OK)
+async def get_range_stats(start_year: int = None, start_month: int = None, end_year: int = None, end_month: int = None, db: AsyncSession = Depends(get_db), user: int = Depends(get_current_user)):
+    now = datetime.now()
+    if start_year is None:
+        start_year = now.year
+    if end_year is None:
+        end_year = now.year
+    if start_month is None:
+        start_month = now.month
+    if end_month is None:
+        end_month = now.month
+    db_range_stats = await db.execute(select(MonthlyStats.category, func.sum(MonthlyStats.total_amount).label('total_range_amount')).where(MonthlyStats.user_id == user, (MonthlyStats.year * 12 + MonthlyStats.month).between(start_year * 12 + start_month, end_year * 12 + end_month)).group_by(MonthlyStats.category))
+    return [RangeStatsResponse.model_validate(row) for row in db_range_stats.mappings().all()]
