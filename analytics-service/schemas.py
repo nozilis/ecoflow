@@ -15,3 +15,9 @@ class YearlyStatsResponse(BaseModel):
     year: int
     category: str
     total_year_amount: int
+
+class RangeStatsResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    category: str
+    total_range_amount: int
