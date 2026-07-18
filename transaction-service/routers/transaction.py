@@ -5,6 +5,7 @@ from models import Transaction
 from schemas import TransactionCreate, TransactionResponse, TransactionUpdate
 from sqlalchemy import select
 from enums import TransactionType, ExpenseCategory, IncomeCategory
+from publisher import publish_transaction_created
 
 router = APIRouter(
     prefix='/transactions',
@@ -16,6 +17,7 @@ async def create_transaction(transaction: TransactionCreate, user_id: int = Depe
     to_db_transaction = Transaction(user_id = user_id, amount = transaction.amount, transaction_type = transaction.transaction_type, category = transaction.category, description = transaction.description)
     db.add(to_db_transaction)
     await db.commit()
+    await publish_transaction_created(user_id, transaction.amount, transaction.transaction_type, transaction.category)
     return TransactionResponse.model_validate(to_db_transaction)
 
 @router.get('/', status_code=status.HTTP_200_OK)
