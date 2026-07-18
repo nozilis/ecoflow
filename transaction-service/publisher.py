@@ -23,3 +23,8 @@ async def publish_event(message_body, routing_key):
         )
 
         print(f" Sent: {message_body}")
+        
+async def publish_transaction_created(user_id, amount, transaction_type, category):
+    data_dict = {'user_id': user_id, 'amount': amount, 'transaction_type': transaction_type.value, 'category': category.value} 
+    message_body = json.dumps(data_dict).encode("utf-8")
+    await publish_event(message_body, 'transaction.created')
