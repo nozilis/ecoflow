@@ -18,8 +18,10 @@ services:
     ports:
       - "8001:8000"
     depends_on:
-      - postgres_transaction
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
+      postgres_transaction:
+        condition: service_started
   analytics_service:
     build: ./analytics-service
     env_file: 
@@ -29,8 +31,10 @@ services:
     ports:
       - "8002:8000"
     depends_on:
-      - postgres_analytics
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
+      postgres_analytics:
+        condition: service_started
   analytics_service_consumer:
     build: ./analytics-service
     env_file: 
@@ -38,8 +42,10 @@ services:
     volumes:
       - ./analytics-service:/code
     depends_on:
-      - postgres_analytics
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
+      postgres_analytics:
+        condition: service_started
     command: python consumer.py
   postgres_auth:
     image: postgres:16-alpine
@@ -82,6 +88,12 @@ services:
       - rabbitmq:/var/lib/rabbitmq/data
     env_file: 
       - ./.env
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   postgres_auth_data:
