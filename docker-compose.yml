@@ -31,6 +31,16 @@ services:
     depends_on:
       - postgres_analytics
       - rabbitmq
+  analytics_service_consumer:
+    build: ./analytics-service
+    env_file: 
+    - ./analytics-service/.env.docker
+    volumes:
+      - ./analytics-service:/code
+    depends_on:
+      - postgres_analytics
+      - rabbitmq
+    command: python consumer.py
   postgres_auth:
     image: postgres:16-alpine
     container_name: ecoflow_auth_postgres_db
