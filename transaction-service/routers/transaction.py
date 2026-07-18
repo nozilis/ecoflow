@@ -17,7 +17,8 @@ async def create_transaction(transaction: TransactionCreate, user_id: int = Depe
     to_db_transaction = Transaction(user_id = user_id, amount = transaction.amount, transaction_type = transaction.transaction_type, category = transaction.category, description = transaction.description)
     db.add(to_db_transaction)
     await db.commit()
-    await publish_transaction_created(user_id, transaction.amount, transaction.transaction_type, transaction.category)
+    await db.refresh(to_db_transaction)
+    await publish_transaction_created(user_id, transaction.amount, transaction.transaction_type, transaction.category, to_db_transaction.created_at)
     return TransactionResponse.model_validate(to_db_transaction)
 
 @router.get('/', status_code=status.HTTP_200_OK)
