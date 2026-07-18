@@ -19,6 +19,18 @@ services:
       - "8001:8000"
     depends_on:
       - postgres_transaction
+      - rabbitmq
+  analytics_service:
+    build: ./analytics-service
+    env_file: 
+    - ./analytics-service/.env.docker
+    volumes:
+      - ./analytics-service:/code
+    ports:
+      - "8002:8000"
+    depends_on:
+      - postgres_analytics
+      - rabbitmq
   postgres_auth:
     image: postgres:16-alpine
     container_name: ecoflow_auth_postgres_db
@@ -39,7 +51,30 @@ services:
       - postgres_transaction_data:/var/lib/postgresql/data
     env_file: 
       - ./transaction-service/.env
+  postgres_analytics:
+    image: postgres:16-alpine
+    container_name: ecoflow_analytics_postgres_db
+    restart: always
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_analytics_data:/var/lib/postgresql/data
+    env_file: 
+      - ./analytics-service/.env
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: ecoflow_rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq:/var/lib/rabbitmq/data
+    env_file: 
+      - ./.env
 
 volumes:
   postgres_auth_data:
   postgres_transaction_data:
+  postgres_analytics_data:
+  rabbitmq:
