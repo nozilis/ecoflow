@@ -6,7 +6,7 @@ class Base(DeclarativeBase):
     pass
 
 class UserContact(Base):
-    __tablename__ = 'user_contact'
+    __tablename__ = 'user_contacts'
 
     user_id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(100), unique=True)
@@ -20,7 +20,7 @@ class NotificationSettings(Base):
     weekly_summary_notification: Mapped[bool] = mapped_column(Boolean, default=True)
 
 class NotificationLog(Base):
-    __tablename__ = 'notifications_history'
+    __tablename__ = 'notifications_logs'
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey('user_contact.user_id'))
