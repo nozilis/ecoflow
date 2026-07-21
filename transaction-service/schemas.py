@@ -6,7 +6,7 @@ from datetime import datetime
 class TransactionCreate(BaseModel):
     amount: int
     transaction_type: TransactionType
-    category: ExpenseCategory | IncomeCategory  #Union enum classes for typification
+    category: Optional[ExpenseCategory | IncomeCategory] = 'Other'  #Union enum classes for typification
     description: Optional[str] = None
 
     @model_validator(mode='after')
