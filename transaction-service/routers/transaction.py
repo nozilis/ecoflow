@@ -42,17 +42,17 @@ async def update_transaction(transaction_id: int, transaction_update_request: Tr
     db_transaction = db_transaction_is_exist.scalar_one_or_none()
     if not db_transaction:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Транзакция не найдена')
+    transaction_update_dump = transaction_update_request.model_dump(exclude_unset=True)
     final_type = transaction_update_request.transaction_type if transaction_update_request.transaction_type is not None else db_transaction.transaction_type
-    final_category = transaction_update_request.category if transaction_update_request.category is not None else db_transaction.category
+    final_category = transaction_update_dump.get('category', db_transaction.category)
     if final_type == TransactionType.EXPENSE:
-        if final_category.value not in [category.value for category in ExpenseCategory]:
+        if final_category not in [category for category in ExpenseCategory]:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail='Категория транзакции заполнена неверно!')
     else:
-        if final_category.value not in [category.value for category in IncomeCategory]:
+        if final_category not in [category for category in IncomeCategory]:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail='Категория транзакции заполнена неверно!')
-    transaction_update_dump = transaction_update_request.model_dump().items()
-    for item, value in transaction_update_dump:
-        if value is not None:
-            setattr(db_transaction, item, value)
+    transaction_update_dump_items = transaction_update_dump.items()
+    for item, value in transaction_update_dump_items:
+        setattr(db_transaction, item, value)
     await db.commit()
     return TransactionResponse.model_validate(db_transaction)
