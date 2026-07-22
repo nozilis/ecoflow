@@ -9,7 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-async def run_consumer(queue_name: str, handlers: dict[str, callable]):
+async def run_consumer(handlers: dict[str, callable]):
     connection = await aio_pika.connect_robust(
         f"amqp://{config('RABBITMQ_DEFAULT_USER')}:{config('RABBITMQ_DEFAULT_PASS')}@rabbitmq/"
     )
@@ -19,7 +19,7 @@ async def run_consumer(queue_name: str, handlers: dict[str, callable]):
 
         exchange = await channel.declare_exchange("ecoflow_events", aio_pika.ExchangeType.TOPIC, durable=True)
 
-        queue = await channel.declare_queue(queue_name, durable=True)
+        queue = await channel.declare_queue('notification_service.events', durable=True)
 
         for routing_key in handlers.keys():
             await queue.bind(exchange, routing_key=routing_key)
@@ -50,7 +50,7 @@ async def handle_user_created(data: dict, session):
 
 if __name__ == "__main__":
     tasks = [
-        run_consumer("notification_user_created", {'user.created': handle_user_created})
+        run_consumer({'user.created': handle_user_created})
     ]
     
     asyncio.run(asyncio.gather(*tasks))
