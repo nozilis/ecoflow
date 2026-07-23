@@ -5,7 +5,7 @@ from sqlalchemy import select
 from models import UserProfile
 from schemas import UserProfileResponse, UserProfileUpdate
 from enums import VisibilityChoice
-from publisher import publish_user_updated, publish_user_deleted
+from publisher import publish_user_events
 from sqlalchemy.exc import IntegrityError
 
 router = APIRouter(
@@ -48,7 +48,7 @@ async def update_user_profile(user_profile_update_request: UserProfileUpdate, db
         setattr(db_user_profile, item, value)
     try:
         await db.commit()
-        await publish_user_updated(request_user, user_profile_update_request.username, user_profile_update_request.email)
+        await publish_user_events('updated', request_user, **{k: v for k, v in user_profile_update_dump_items if k in {'username', 'email'}})
         return UserProfileResponse.model_validate(db_user_profile)
     except IntegrityError as e:
         pg_code = e.orig.diag.message_detail
@@ -64,4 +64,4 @@ async def delete_user_profile(db: AsyncSession = Depends(get_db), request_user: 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
     await db.delete(db_user_profile)
     await db.commit()
-    await publish_user_deleted(request_user)
+    await publish_user_events('deleted', request_user)
