@@ -1,7 +1,5 @@
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import String, Integer, Date, func, UniqueConstraint
-from sqlalchemy.ext.hybrid import hybrid_property
-from datetime import date
+from sqlalchemy import String, Integer, UniqueConstraint
 
 class Base(DeclarativeBase):
     pass
