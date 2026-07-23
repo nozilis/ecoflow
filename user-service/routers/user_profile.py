@@ -5,7 +5,7 @@ from sqlalchemy import select
 from models import UserProfile
 from schemas import UserProfileResponse, UserProfileUpdate
 from enums import VisibilityChoice
-from publisher import publish_user_updated
+from publisher import publish_user_updated, publish_user_deleted
 from sqlalchemy.exc import IntegrityError
 
 router = APIRouter(
@@ -55,3 +55,13 @@ async def update_user_profile(user_profile_update_request: UserProfileUpdate, db
         await db.rollback()
         print(f'{pg_code}')
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'Username or email is already taken')
+
+@router.delete('/', status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user_profile(db: AsyncSession = Depends(get_db), request_user: int = Depends(get_current_user)):
+    user_profile_is_exist = await db.execute(select(UserProfile).where(UserProfile.user_id == request_user))
+    db_user_profile = user_profile_is_exist.scalar_one_or_none()
+    if db_user_profile is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
+    await db.delete(db_user_profile)
+    await db.commit()
+    await publish_user_deleted(request_user)
