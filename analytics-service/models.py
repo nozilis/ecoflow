@@ -1,5 +1,5 @@
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import String, Integer, UniqueConstraint
+from sqlalchemy import String, Integer, UniqueConstraint, ForeignKey
 
 class Base(DeclarativeBase):
     pass
@@ -16,3 +16,9 @@ class MonthlyStats(Base):
     total_amount: Mapped[int] = mapped_column(Integer)
     
     __table_args__ = (UniqueConstraint('user_id', 'year', 'month', 'category', name='month_category_agregation'), )
+
+class UserBudget(Base):
+    __tablename__ = 'user_budget'
+
+    user_id: Mapped[int] = mapped_column(primary_key=True)
+    budget_limit: Mapped[int] = mapped_column(Integer, nullable=True)
