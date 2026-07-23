@@ -7,6 +7,7 @@ from datetime import datetime
 from sqlalchemy import select
 from models import MonthlyStats
 import logging
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +35,7 @@ async def run_consumer(handlers: dict[str, callable]):
                         async with async_session_maker() as session: 
                             await handler(data, session)
 
-async def handle_transaction_created(data: dict, session):
+async def handle_transaction_created(data: dict, session: AsyncSession):
     date = datetime.fromisoformat(data['created_at'])
     year, month = date.year, date.month
     monthly_stats_is_exist = await session.execute(select(MonthlyStats).where(MonthlyStats.user_id == data['user_id'], MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.category == data['category']))

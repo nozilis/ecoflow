@@ -6,6 +6,7 @@ from decouple import config
 from sqlalchemy import select
 from models import UserContact, NotificationSettings
 import logging
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ async def run_consumer(handlers: dict[str, callable]):
                         async with async_session_maker() as session:
                             await handler(data, session)
 
-async def handle_user_created(data: dict, session):
+async def handle_user_created(data: dict, session: AsyncSession):
     user_id, email, username = data['id'], data['username'], data['email']
     user_contact_is_exist = await session.execute(select(UserContact).where(UserContact.username == username))
     db_user_contact = user_contact_is_exist.scalar_one_or_none()
