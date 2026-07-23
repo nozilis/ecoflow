@@ -12,8 +12,8 @@ class UserProfileResponse(BaseModel):
     visibility_choice: VisibilityChoice
 
 class UserProfileUpdate(BaseModel):
-    username: Optional[str]
-    email: Optional[str]
-    avatar: Optional[str]
-    social_links: Optional[dict] 
-    visibility_choice: Optional[VisibilityChoice]
+    username: Optional[str] = None
+    email: Optional[str] = None
+    avatar: Optional[str] = None
+    social_links: Optional[dict] = None
+    visibility_choice: Optional[VisibilityChoice] = None
