@@ -5,6 +5,8 @@ from sqlalchemy import select
 from models import UserProfile
 from schemas import UserProfileResponse, UserProfileUpdate
 from enums import VisibilityChoice
+from publisher import publish_user_updated
+from sqlalchemy.exc import IntegrityError
 
 router = APIRouter(
     prefix='/user_profile',
@@ -30,8 +32,26 @@ async def update_user_profile(user_profile_update_request: UserProfileUpdate, db
     db_user_profile = user_profile_is_exist.scalar_one_or_none()
     if db_user_profile is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
-    user_profile_update_dump = user_profile_update_request.model_dump(exclude_unset=True).items()
-    for item, value in user_profile_update_dump:
+    user_profile_update_dump = user_profile_update_request.model_dump(exclude_unset=True)
+    if user_profile_update_dump.get('username') is not None:
+        username_is_already_exist = await db.execute(select(UserProfile).where(UserProfile.username == user_profile_update_dump.get('username')))
+        db_username_is_already_exist = username_is_already_exist.scalar_one_or_none()
+        if db_username_is_already_exist is not None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Username is already exist')
+    if user_profile_update_dump.get('email') is not None:
+        email_is_already_exist = await db.execute(select(UserProfile).where(UserProfile.email == user_profile_update_dump.get('email')))
+        db_email_is_already_exist = email_is_already_exist.scalar_one_or_none()
+        if db_email_is_already_exist is not None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Email is already exist')
+    user_profile_update_dump_items = user_profile_update_dump.items()
+    for item, value in user_profile_update_dump_items:
         setattr(db_user_profile, item, value)
-    await db.commit()
-    return UserProfileResponse.model_validate(db_user_profile)
+    try:
+        await db.commit()
+        await publish_user_updated(request_user, user_profile_update_request.username, user_profile_update_request.email)
+        return UserProfileResponse.model_validate(db_user_profile)
+    except IntegrityError as e:
+        pg_code = e.orig.diag.message_detail
+        await db.rollback()
+        print(f'{pg_code}')
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'Username or email is already taken')
