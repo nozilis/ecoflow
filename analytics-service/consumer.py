@@ -5,7 +5,7 @@ import json
 from database import async_session_maker
 from datetime import datetime
 from sqlalchemy import select
-from models import MonthlyStats
+from models import MonthlyStats, UserBudget
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,9 +49,23 @@ async def handle_transaction_created(data: dict, session: AsyncSession):
         logger.info('Total amount successfully increased')
     await session.commit()
 
+async def handle_budget_limit_updated(data: dict, session: AsyncSession):
+    user_id, budget_limit = data['user_id'], data['budget_limit']
+    user_budget_is_exist = await session.execute(select(UserBudget).where(UserBudget.user_id == user_id))
+    db_user_budget = user_budget_is_exist.scalar_one_or_none()
+    if db_user_budget is None:
+        db_user_budget = UserBudget(user_id=user_id, budget_limit=budget_limit)
+        session.add(db_user_budget)
+        logger.info('Budget limit successfully added')
+    else:
+        db_user_budget.budget_limit = budget_limit
+        logger.info('Budget limit successfully updated')
+    await session.commit()
+
 if __name__ == "__main__":
     tasks = [
-        run_consumer({'transaction.created': handle_transaction_created})
+        run_consumer({'transaction.created': handle_transaction_created}),
+        run_consumer({'budget.limit_updated': handle_transaction_created})
     ]
 
     asyncio.run(asyncio.gather(*tasks))
