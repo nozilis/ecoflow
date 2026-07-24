@@ -5,7 +5,7 @@ from models import Transaction
 from schemas import TransactionCreate, TransactionResponse, TransactionUpdate
 from sqlalchemy import select
 from enums import TransactionType, ExpenseCategory, IncomeCategory
-from publisher import publish_transaction_created
+from publisher import publish_transaction_events
 
 router = APIRouter(
     prefix='/transactions',
@@ -14,12 +14,12 @@ router = APIRouter(
 
 @router.post('/', status_code=status.HTTP_201_CREATED)
 async def create_transaction(transaction: TransactionCreate, user_id: int = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    to_db_transaction = Transaction(user_id = user_id, amount = transaction.amount, transaction_type = transaction.transaction_type, category = transaction.category, description = transaction.description)
-    db.add(to_db_transaction)
+    create_transaction = Transaction(user_id = user_id, amount = transaction.amount, transaction_type = transaction.transaction_type, category = transaction.category, description = transaction.description)
+    db.add(create_transaction)
     await db.commit()
-    await db.refresh(to_db_transaction)
-    await publish_transaction_created(user_id, transaction.amount, transaction.transaction_type, transaction.category, to_db_transaction.created_at)
-    return TransactionResponse.model_validate(to_db_transaction)
+    await db.refresh(create_transaction)
+    await publish_transaction_events('created', user_id, amount=transaction.amount, transaction_type=transaction.transaction_type, category=transaction.category, created_at=create_transaction.created_at)
+    return TransactionResponse.model_validate(create_transaction)
 
 @router.get('/', status_code=status.HTTP_200_OK)
 async def get_transactions(user_id: int = Depends(get_current_user), db: AsyncSession = Depends(get_db), page: int = 1, page_size: int = 20):
@@ -35,6 +35,7 @@ async def delete_transaction(transaction_id: int, user_id: int = Depends(get_cur
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Транзакция не найдена')
     await db.delete(db_transaction)
     await db.commit()
+    await publish_transaction_events('deleted', user_id, amount=db_transaction.amount, transaction_type=db_transaction.transaction_type, category=db_transaction.category, created_at=db_transaction.created_at)
 
 @router.patch('/{transaction_id}', status_code=status.HTTP_200_OK)
 async def update_transaction(transaction_id: int, transaction_update_request: TransactionUpdate, user_id: int = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
@@ -55,4 +56,5 @@ async def update_transaction(transaction_id: int, transaction_update_request: Tr
     for item, value in transaction_update_dump_items:
         setattr(db_transaction, item, value)
     await db.commit()
+    await publish_transaction_events('updated', user_id, amount=transaction_update_dump.get('amount', db_transaction.amount), transaction_type=transaction_update_dump.get('transaction_type', db_transaction.transaction_type), category=transaction_update_dump.get('category', db_transaction.category), created_at=db_transaction.created_at)
     return TransactionResponse.model_validate(db_transaction)
