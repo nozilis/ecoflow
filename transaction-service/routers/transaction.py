@@ -43,6 +43,7 @@ async def update_transaction(transaction_id: int, transaction_update_request: Tr
     db_transaction = db_transaction_is_exist.scalar_one_or_none()
     if not db_transaction:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Транзакция не найдена')
+    recent_amount, recent_type = db_transaction.amount, db_transaction.transaction_type
     transaction_update_dump = transaction_update_request.model_dump(exclude_unset=True)
     final_type = transaction_update_request.transaction_type if transaction_update_request.transaction_type is not None else db_transaction.transaction_type
     final_category = transaction_update_dump.get('category', db_transaction.category)
@@ -56,5 +57,5 @@ async def update_transaction(transaction_id: int, transaction_update_request: Tr
     for item, value in transaction_update_dump_items:
         setattr(db_transaction, item, value)
     await db.commit()
-    await publish_transaction_events('updated', user_id, amount=transaction_update_dump.get('amount', db_transaction.amount), transaction_type=transaction_update_dump.get('transaction_type', db_transaction.transaction_type), category=transaction_update_dump.get('category', db_transaction.category), created_at=db_transaction.created_at)
+    await publish_transaction_events('updated', user_id, amount=transaction_update_dump.get('amount', db_transaction.amount), transaction_type=transaction_update_dump.get('transaction_type', db_transaction.transaction_type), category=transaction_update_dump.get('category', db_transaction.category), created_at=db_transaction.created_at, recent_amount=recent_amount, recent_type=recent_type)
     return TransactionResponse.model_validate(db_transaction)
