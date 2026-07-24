@@ -18,8 +18,8 @@ async def get_monthly_stats(month: int = None, year: int = None, db: AsyncSessio
        month = now.month
     if year is None:
         year = now.year
-    result = await db.execute(select(MonthlyStats).where(MonthlyStats.user_id == user, MonthlyStats.month == month, MonthlyStats.year == year))
-    db_monthly_stats = result.scalars().all()
+    monthly_stats = await db.execute(select(MonthlyStats).where(MonthlyStats.user_id == user, MonthlyStats.month == month, MonthlyStats.year == year))
+    db_monthly_stats = monthly_stats.scalars().all()
     return [MonthlyStatsResponse.model_validate(s) for s in db_monthly_stats]
 
 @router.get('/yearly_stats', status_code=status.HTTP_200_OK)
