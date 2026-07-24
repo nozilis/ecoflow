@@ -25,6 +25,6 @@ async def publish_event(message_body, routing_key):
         print(f" Sent: {message_body}")
 
 async def publish_user_events(event_type, user_id, **kwargs):
-    data_dict = {'id': user_id, **kwargs}
+    data_dict = {'user_id': user_id, **kwargs}
     message_body = json.dumps(data_dict).encode("utf-8")
     await publish_event(message_body, f'user.{event_type}')
