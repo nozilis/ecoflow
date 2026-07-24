@@ -2,6 +2,7 @@ import aio_pika
 from decouple import config
 import json
 from datetime import datetime
+from enum import Enum
 
 async def publish_event(message_body, routing_key):
     connection = await aio_pika.connect_robust(
@@ -24,8 +25,8 @@ async def publish_event(message_body, routing_key):
         )
 
         print(f" Sent: {message_body}")
-        
-async def publish_transaction_created(user_id, amount, transaction_type, category, created_at):
-    data_dict = {'user_id': user_id, 'amount': amount, 'transaction_type': transaction_type.value, 'category': category.value, 'created_at': created_at} 
-    message_body = json.dumps(data_dict, default=lambda o: o.isoformat() if isinstance(o, datetime) else None).encode("utf-8")
-    await publish_event(message_body, 'transaction.created')
+
+async def publish_transaction_events(event_type, user_id, **kwargs):
+    data_dict = {'user_id': user_id, **kwargs} 
+    message_body = json.dumps(data_dict, default=lambda o:o.value if isinstance(o, Enum) else (o.isoformat() if isinstance(o, datetime) else None)).encode("utf-8")
+    await publish_event(message_body, f'transaction.{event_type}')
