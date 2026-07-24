@@ -48,7 +48,10 @@ async def update_user_profile(user_profile_update_request: UserProfileUpdate, db
         setattr(db_user_profile, item, value)
     try:
         await db.commit()
-        await publish_user_events('updated', request_user, **{k: v for k, v in user_profile_update_dump_items if k in {'username', 'email'}})
+        if 'username' in user_profile_update_dump or 'email' in user_profile_update_dump:
+            await publish_user_events('updated', request_user, **{k: v for k, v in user_profile_update_dump_items if k in {'username', 'email'}})
+        if 'budget_limit' in user_profile_update_dump:
+            await publish_user_events('budget_limit_updated', request_user, budget_limit=user_profile_update_dump.get('budget_limit'))
         return UserProfileResponse.model_validate(db_user_profile)
     except IntegrityError as e:
         pg_code = e.orig.diag.message_detail
