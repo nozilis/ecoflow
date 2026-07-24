@@ -17,9 +17,9 @@ router = APIRouter(
 @router.post('/register', status_code=status.HTTP_201_CREATED)
 async def register_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
     hashed_password = bcrypt.hash(user.password)
-    db_user_is_exist_check = await db.execute(select(User).where(or_(User.username == user.username, User.email == user.email)))
-    user_is_exist_check = db_user_is_exist_check.scalar_one_or_none()
-    if not user_is_exist_check:
+    user_is_exist = await db.execute(select(User).where(or_(User.username == user.username, User.email == user.email)))
+    db_user = user_is_exist.scalar_one_or_none()
+    if db_user is None:
         create_user = User(username = user.username, hashed_password = hashed_password, email = user.email)
         try:
             db.add(create_user)
@@ -31,7 +31,7 @@ async def register_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
             await db.rollback()
             print(f'{pg_code}')
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'Username or email is already taken')
-    elif user_is_exist_check.username == user.username:
+    elif db_user.username == user.username:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'Username is already taken')
     else:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'Email is already taken')
