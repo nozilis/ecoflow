@@ -97,6 +97,19 @@ async def handle_budget_limit_updated(data: dict, session: AsyncSession):
         logger.info('Budget limit successfully updated')
     await session.commit()
 
+async def handle_user_deleted(data: dict, session: AsyncSession):
+    user_id = data['user_id']
+    user_monthly_stats_is_exist = await session.execute(select(MonthlyStats).where(MonthlyStats.user_id == user_id))
+    user_budget_is_exist = await session.execute(select(UserBudget).where(UserBudget.user_id == user_id))
+    db_user_monthly_stats = user_monthly_stats_is_exist.scalars().all()
+    db_user_budget = user_budget_is_exist.scalar_one_or_none()
+    if db_user_monthly_stats:
+        for monthly_stats in db_user_monthly_stats:
+            await session.delete(monthly_stats)
+    if db_user_budget is not None:
+        await session.delete(db_user_budget)
+    await session.commit()
+
 if __name__ == "__main__":
     tasks = [
         run_consumer({'transaction.created': handle_transaction_created}),
