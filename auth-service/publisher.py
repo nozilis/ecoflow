@@ -1,6 +1,7 @@
 import aio_pika
 from decouple import config
 import json
+from datetime import datetime
 
 async def publish_event(message_body, routing_key):
     connection = await aio_pika.connect_robust(
@@ -24,7 +25,7 @@ async def publish_event(message_body, routing_key):
 
         print(f" Sent: {message_body}")
         
-async def publish_user_created(user_id, username, email):
-    data_dict = {'id': user_id, 'username': username, 'email': email}
-    message_body = json.dumps(data_dict).encode("utf-8")
-    await publish_event(message_body, 'user.created')
+async def publish_user_events(event_type, user_id, **kwargs):
+    data_dict = {'id': user_id, **kwargs}
+    message_body = json.dumps(data_dict, default=lambda o: o.isoformat() if isinstance(o, datetime) else None).encode("utf-8")
+    await publish_event(message_body, f'user.{event_type}')
