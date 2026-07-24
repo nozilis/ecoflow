@@ -69,6 +69,21 @@ async def handle_transaction_updated(data: dict, session: AsyncSession):
     else:
         logger.info('MonthlyStats object not found')
 
+async def handle_transaction_deleted(data: dict, session: AsyncSession):
+    date = datetime.fromisoformat(data['created_at'])
+    year, month = date.year, date.month
+    monthly_stats_is_exist = await session.execute(select(MonthlyStats).where(MonthlyStats.user_id == data['user_id'], MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.category == data['category']))
+    db_monthly_stats = monthly_stats_is_exist.scalar_one_or_none()
+    if db_monthly_stats:
+        if data['transaction_type'] == 'Income':
+            db_monthly_stats.total_amount -= data['amount']
+        else:
+            db_monthly_stats.total_amount += data['amount']
+        await session.commit()
+        logger.info('MonthlyStats successfully updated')
+    else:
+        logger.info('MonthlyStats object not found')
+
 async def handle_budget_limit_updated(data: dict, session: AsyncSession):
     user_id, budget_limit = data['user_id'], data['budget_limit']
     user_budget_is_exist = await session.execute(select(UserBudget).where(UserBudget.user_id == user_id))
