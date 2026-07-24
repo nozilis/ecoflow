@@ -7,7 +7,7 @@ from passlib.hash import bcrypt
 from models import User
 from sqlalchemy import select, or_
 from jwt_token import create_access_token
-from publisher import publish_user_created
+from publisher import publish_user_events
 
 router = APIRouter(
     prefix='/auth',
@@ -24,7 +24,7 @@ async def register_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
         try:
             db.add(create_user)
             await db.commit()
-            await publish_user_created(user.username, user.email)
+            await publish_user_events('created', create_user.id, username=user.username, email=user.email, created_at=create_user.created_at)
             return UserResponse.model_validate(create_user)
         except IntegrityError as e:
             pg_code = e.orig.diag.message_detail
