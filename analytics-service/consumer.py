@@ -54,9 +54,9 @@ async def handle_transaction_created(data: dict, session: AsyncSession):
     db_monthly_stats_total = monthly_stats_total.scalar_one_or_none()
     db_user_budget_limit = user_budget_limit.scalar_one_or_none()
     if db_monthly_stats_total is None:
-        logger.info('User transactions not found')
+        logger.warning(f'User transactions not found')
     if db_user_budget_limit is None:
-        logger.info('User budget limit not found')
+        logger.warning(f'User budget limit not found')
     if db_monthly_stats_total and db_user_budget_limit:
         if db_monthly_stats_total > db_user_budget_limit:
             await publish_analytics_events('exceed', user_id, monthly_stats_total=db_monthly_stats_total, user_budget_limit=db_user_budget_limit)
@@ -82,7 +82,7 @@ async def handle_transaction_updated(data: dict, session: AsyncSession):
         await session.commit()
         logger.info('MonthlyStats successfully updated')
     else:
-        logger.info('MonthlyStats object not found')
+        logger.warning('MonthlyStats object not found')
 
 async def handle_transaction_deleted(data: dict, session: AsyncSession):
     date = datetime.fromisoformat(data['created_at'])
@@ -98,7 +98,7 @@ async def handle_transaction_deleted(data: dict, session: AsyncSession):
         await session.commit()
         logger.info('MonthlyStats successfully updated')
     else:
-        logger.info('MonthlyStats object not found')
+        logger.warning('MonthlyStats object not found')
 
 async def handle_budget_limit_updated(data: dict, session: AsyncSession):
     user_id, budget_limit = data['user_id'], data['budget_limit']
@@ -122,8 +122,10 @@ async def handle_user_deleted(data: dict, session: AsyncSession):
     if db_user_monthly_stats:
         for monthly_stats in db_user_monthly_stats:
             await session.delete(monthly_stats)
+        logger.info('MonthlyStats objects successfully deleted')
     if db_user_budget is not None:
         await session.delete(db_user_budget)
+        logger.info('UserBudget successfully deleted')
     await session.commit()
 
 if __name__ == "__main__":
