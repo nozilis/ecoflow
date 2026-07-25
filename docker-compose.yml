@@ -9,7 +9,10 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - postgres_auth
+      rabbitmq:
+        condition: service_healthy
+      postgres_auth:
+        condition: service_started
   transaction_service:
     build: ./transaction-service
     env_file: 
@@ -38,6 +41,20 @@ services:
         condition: service_healthy
       postgres_analytics:
         condition: service_started
+  user_service:
+    build: ./user-service
+    env_file: 
+    - ./user-service/.env.docker
+    restart: always
+    volumes:
+      - ./user-service:/code
+    ports:
+      - "8003:8000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres_user:
+        condition: service_started
   analytics_service_consumer:
     build: ./analytics-service
     env_file: 
@@ -49,6 +66,45 @@ services:
       rabbitmq:
         condition: service_healthy
       postgres_analytics:
+        condition: service_started
+    command: python consumer.py
+  auth_service_consumer:
+    build: ./auth-service
+    env_file:
+    - ./auth-service/.env.docker
+    restart: always
+    volumes:
+      - ./auth-service:/code
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres_auth:
+        condition: service_started
+    command: python consumer.py
+  notification_service_consumer:
+    build: ./notification-service
+    env_file:
+    - ./notification-service/.env.docker
+    restart: always
+    volumes:
+      - ./notification-service:/code
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres_notification:
+        condition: service_started
+    command: python consumer.py
+  user_service_consumer:
+    build: ./user-service
+    env_file:
+    - ./user-service/.env.docker
+    restart: always
+    volumes:
+      - ./user-service:/code
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres_user:
         condition: service_started
     command: python consumer.py
   postgres_auth:
@@ -81,6 +137,26 @@ services:
       - postgres_analytics_data:/var/lib/postgresql/data
     env_file: 
       - ./analytics-service/.env
+  postgres_user:
+    image: postgres:16-alpine
+    container_name: ecoflow_user_postgres_db
+    restart: always
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_user_data:/var/lib/postgresql/data
+    env_file: 
+      - ./user-service/.env
+  postgres_notification:
+    image: postgres:16-alpine
+    container_name: ecoflow_notification_postgres_db
+    restart: always
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres_notification_data:/var/lib/postgresql/data
+    env_file: 
+      - ./notification-service/.env
   rabbitmq:
     image: rabbitmq:3-management
     container_name: ecoflow_rabbitmq
@@ -103,4 +179,6 @@ volumes:
   postgres_auth_data:
   postgres_transaction_data:
   postgres_analytics_data:
+  postgres_user_data:
+  postgres_notification_data:
   rabbitmq:
