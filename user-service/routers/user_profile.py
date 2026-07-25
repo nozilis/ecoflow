@@ -52,6 +52,8 @@ async def update_user_profile(user_profile_update_request: UserProfileUpdate, db
             await publish_user_events('updated', request_user, **{k: v for k, v in user_profile_update_dump_items if k in {'username', 'email'}})
         if 'budget_limit' in user_profile_update_dump:
             await publish_user_events('budget_limit_updated', request_user, budget_limit=user_profile_update_dump.get('budget_limit'))
+        if 'monthly_budget_exceeded_notification' in user_profile_update_dump or 'weekly_summary_notification' in user_profile_update_dump:
+            await publish_user_events('settings.updated', request_user, **{k: v for k, v in user_profile_update_dump_items if k in {'monthly_budget_exceeded_notification', 'weekly_summary_notification'}})
         return UserProfileResponse.model_validate(db_user_profile)
     except IntegrityError as e:
         pg_code = e.orig.diag.message_detail
