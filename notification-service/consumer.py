@@ -4,7 +4,7 @@ import json
 from database import async_session_maker
 from decouple import config
 from sqlalchemy import select
-from models import UserContact, NotificationSettings
+from models import UserContact, NotificationSettings, NotificationLog
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -48,6 +48,22 @@ async def handle_user_created(data: dict, session: AsyncSession):
     else:
         logger.info(f"User {username} already exists in UserContact, skipping")
     
+async def handle_budget_exceed(data: dict, session: AsyncSession):
+    user_id, monthly_stats_total, user_budget_limit = data['user_id'], data['monthly_stats_total'], data['user_budget_limit']
+    difference = monthly_stats_total - user_budget_limit
+    username = await session.execute(select(UserContact.username).where(UserContact.user_id == user_id))
+    db_username = username.scalar_one_or_none()
+    if db_username is None:
+        logger.info('User not found')
+    else:
+        notification_topic = 'Budget exceed'
+        notification_message = f'Hello, {db_username}, your spending has exceeded the expected limit by {difference}'
+        print('*Sending email*')
+        logger.info('Email was successfully sended')
+        notification_log = NotificationLog(user_id = user_id, notification_topic = notification_topic, notification_message = notification_message)
+        session.add(notification_log)
+        await session.commit()
+        logger.info('Notification log was successfully created')
 
 if __name__ == "__main__":
     tasks = [
