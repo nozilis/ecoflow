@@ -1,5 +1,5 @@
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import String, JSON, Enum, Integer
+from sqlalchemy import String, JSON, Enum, Integer, Boolean
 from enums import VisibilityChoice
 from typing import Dict
 
@@ -17,3 +17,5 @@ class UserProfile(Base):
     budget_limit: Mapped[int] = mapped_column(Integer, nullable=True)
     social_links: Mapped[Dict[str, str]] = mapped_column(JSON, nullable=True)
     visibility_choice: Mapped[VisibilityChoice] = mapped_column(Enum(VisibilityChoice), default=VisibilityChoice.PRIVATE)
+    monthly_budget_exceeded_notification: Mapped[bool] = mapped_column(Boolean, default=True)
+    weekly_summary_notification: Mapped[bool] = mapped_column(Boolean, default=True)
