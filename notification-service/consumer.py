@@ -106,6 +106,9 @@ async def handle_settings_updated(data: dict, session: AsyncSession):
 if __name__ == "__main__":
     handlers = {
         'user.created': handle_user_created,
+        'user.updated': handle_user_updated,
+        'user.deleted': handle_user_deleted,
         'budget.exceed': handle_budget_exceed,
+        'user.settings.updated': handle_settings_updated,
     }
     asyncio.run(run_consumer(handlers))
