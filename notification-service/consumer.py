@@ -66,8 +66,8 @@ async def handle_budget_exceed(data: dict, session: AsyncSession):
         logger.info('Notification log was successfully created')
 
 if __name__ == "__main__":
-    tasks = [
-        run_consumer({'user.created': handle_user_created})
-    ]
-    
-    asyncio.run(asyncio.gather(*tasks))
+    handlers = {
+        'user.created': handle_user_created,
+        'budget.exceed': handle_budget_exceed,
+    }
+    asyncio.run(run_consumer(handlers))
