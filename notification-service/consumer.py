@@ -47,7 +47,21 @@ async def handle_user_created(data: dict, session: AsyncSession):
         logger.info(f"User {username} successfully created")
     else:
         logger.info(f"User {username} already exists in UserContact, skipping")
-    
+
+async def handle_user_updated(data: dict, session: AsyncSession):
+    user_id, username, email = data['user_id'], data.get('username'), data.get('email')
+    user_contact_is_exist = await session.execute(select(UserContact).where(UserContact.user_id == user_id))
+    db_user_contact = user_contact_is_exist.scalar_one_or_none()
+    if db_user_contact is None:
+        logger.info('User not found')
+    else:
+        if username:
+            db_user_contact.username = username
+        if email:
+            db_user_contact.email = email
+        await session.commit()
+        logger.info('User successfully updated')
+
 async def handle_budget_exceed(data: dict, session: AsyncSession):
     user_id, monthly_stats_total, user_budget_limit = data['user_id'], data['monthly_stats_total'], data['user_budget_limit']
     difference = monthly_stats_total - user_budget_limit
