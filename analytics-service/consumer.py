@@ -111,9 +111,11 @@ async def handle_user_deleted(data: dict, session: AsyncSession):
     await session.commit()
 
 if __name__ == "__main__":
-    tasks = [
-        run_consumer({'transaction.created': handle_transaction_created}),
-        run_consumer({'budget.limit_updated': handle_transaction_created})
-    ]
-
-    asyncio.run(asyncio.gather(*tasks))
+    handlers = {
+        'transaction.created': handle_transaction_created,
+        'transaction.updated': handle_transaction_updated,
+        'transaction.deleted': handle_transaction_deleted,
+        'budget.limit_updated': handle_budget_limit_updated,
+        'user.deleted': handle_user_deleted,
+    }
+    asyncio.run(run_consumer(handlers))
