@@ -89,6 +89,20 @@ async def handle_budget_exceed(data: dict, session: AsyncSession):
         await session.commit()
         logger.info('Notification log was successfully created')
 
+async def handle_settings_updated(data: dict, session: AsyncSession):
+    user_id, monthly_budget_exceeded_notification, weekly_summary_notification = data['user_id'], data.get('monthly_budget_exceeded_notification'), data.get('weekly_summary_notification')
+    notification_settings_is_exist = await session.execute(select(NotificationSettings).where(NotificationSettings.user_id == user_id))
+    db_notification_settings = notification_settings_is_exist.scalar_one_or_none()
+    if db_notification_settings is None:
+        logger.info('Settings not found')
+    else:
+        if monthly_budget_exceeded_notification is not None:
+            db_notification_settings.monthly_budget_exceeded_notification = monthly_budget_exceeded_notification
+        if weekly_summary_notification is not None:
+            db_notification_settings.weekly_summary_notification = weekly_summary_notification
+        await session.commit()
+        logger.info('Settings successfully updated')
+
 if __name__ == "__main__":
     handlers = {
         'user.created': handle_user_created,
