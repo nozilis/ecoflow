@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from database import engine
-from routers import user
+from routers import user_profile
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -11,4 +11,4 @@ async def lifespan(app: FastAPI):
     await engine.dispose()
 
 app = FastAPI(lifespan=lifespan, title='User Service API')
-app.include_router(user.router)
+app.include_router(user_profile.router)
