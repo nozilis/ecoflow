@@ -2,6 +2,9 @@ import aio_pika
 from decouple import config
 import json
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 async def publish_event(message_body, routing_key):
     connection = await aio_pika.connect_robust(
@@ -23,9 +26,10 @@ async def publish_event(message_body, routing_key):
             routing_key=routing_key
         )
 
-        print(f" Sent: {message_body}")
+        logger.info(f'Sent: {message_body}')
         
 async def publish_user_events(event_type, user_id, **kwargs):
     data_dict = {'user_id': user_id, **kwargs}
     message_body = json.dumps(data_dict, default=lambda o: o.isoformat() if isinstance(o, datetime) else None).encode("utf-8")
     await publish_event(message_body, f'user.{event_type}')
+    logger.info(f'Event {event_type} successfully published')

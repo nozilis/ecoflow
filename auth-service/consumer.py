@@ -39,7 +39,7 @@ async def handle_user_updated(data: dict, session: AsyncSession):
     user_is_exist = await session.execute(select(User).where(User.id == user_id))
     db_user = user_is_exist.scalar_one_or_none()
     if db_user is None:
-        logger.info('User not found')
+        logger.warning(f'User {user_id} not found')
     else:
         if username:
             db_user.username = username
@@ -53,7 +53,7 @@ async def handle_user_deleted(data: dict, session: AsyncSession):
     user_is_exist = await session.execute(select(User).where(User.id == user_id))
     db_user = user_is_exist.scalar_one_or_none()
     if db_user is None:
-        logger.info('User not found')
+        logger.warning(f'User {user_id} not found')
     else:
         await session.delete(db_user)
         await session.commit()

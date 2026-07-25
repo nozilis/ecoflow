@@ -8,6 +8,9 @@ from decouple import config
 from sqlalchemy import select
 from models import User
 from jwt_token import ALGORITHM
+import logging
+
+logger = logging.getLogger(__name__)
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
@@ -20,6 +23,7 @@ def decode_token(token: str):
         payload = jwt.decode(token, config('SECRET_KEY'), algorithms=[ALGORITHM])
         return payload
     except JWTError:
+        logger.warning('Failed to decode the token') 
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -32,5 +36,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     db_request = await db.execute(select(User).where(User.id == int(user_id)))
     db_user = db_request.scalar_one_or_none()
     if db_user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User is not found")
+        logger.warning(f'User {user_id} not found')
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return db_user

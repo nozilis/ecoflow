@@ -8,6 +8,9 @@ from models import User
 from sqlalchemy import select, or_
 from jwt_token import create_access_token
 from publisher import publish_user_events
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix='/auth',
@@ -25,15 +28,18 @@ async def register_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
             db.add(create_user)
             await db.commit()
             await publish_user_events('created', create_user.id, username=user.username, email=user.email, created_at=create_user.created_at)
+            logger.info('User successfully registered')
             return UserResponse.model_validate(create_user)
         except IntegrityError as e:
             pg_code = e.orig.diag.message_detail
             await db.rollback()
-            print(f'{pg_code}')
+            logger.error(f'IntegrityError during registration: {pg_code}')
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'Username or email is already taken')
     elif db_user.username == user.username:
+        logger.warning('Username is already taken')
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'Username is already taken')
     else:
+        logger.warning('Email is already taken')
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'Email is already taken')
 
 @router.post('/login', status_code=status.HTTP_200_OK)
@@ -41,10 +47,13 @@ async def login_user(user: UserLogin, db: AsyncSession = Depends(get_db)):
     user_is_exist = await db.execute(select(User).where(User.username == user.username))
     db_user = user_is_exist.scalar_one_or_none()
     if db_user is None:
+        logger.warning('User not found')
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid username or password')
     elif bcrypt.verify(user.password, db_user.hashed_password):
+        logger.info('User successfully login')
         return create_access_token({'sub': str(db_user.id)})
     else:
+        logger.warning('User fails verification')
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid username or password')
     
 @router.get('/whoami', status_code=status.HTTP_200_OK)
