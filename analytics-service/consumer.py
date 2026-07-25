@@ -4,10 +4,11 @@ from decouple import config
 import json
 from database import async_session_maker
 from datetime import datetime
-from sqlalchemy import select
+from sqlalchemy import select, func
 from models import MonthlyStats, UserBudget
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
+from publisher import publish_analytics_events
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,18 @@ async def handle_transaction_created(data: dict, session: AsyncSession):
     else:
         db_monthly_stats.total_amount += data['amount']
         logger.info('Total amount successfully increased')
+    monthly_stats_total = await session.execute(select(func.sum(MonthlyStats.total_amount).label('monthly_stats_total')).where(MonthlyStats.user_id == data['user_id'], MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.transaction_type == 'Expense'))
+    user_budget_limit = await session.execute(select(UserBudget).where(UserBudget.user_id == data['user_id']))
+    db_monthly_stats_total = monthly_stats_total.scalar_one_or_none()
+    db_user_budget_limit = user_budget_limit.scalar_one_or_none()
+    if db_monthly_stats_total is None:
+        logger.info('User transactions not found')
+    if db_user_budget_limit is None:
+        logger.info('User budget limit not found')
+    if db_monthly_stats_total and db_user_budget_limit:
+        if db_monthly_stats_total > db_user_budget_limit:
+            await publish_analytics_events('exceed', data['user_id'], monthly_stats_total=db_monthly_stats_total, user_budget_limit=db_user_budget_limit)
+            logger.info('User budget exceed the limit event successfully published')
     await session.commit()
 
 async def handle_transaction_updated(data: dict, session: AsyncSession):
