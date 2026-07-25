@@ -45,22 +45,22 @@ async def handle_transaction_created(data: dict, session: AsyncSession):
     if db_monthly_stats is None:
         db_monthly_stats = MonthlyStats(user_id = user_id, year = year, month = month, category = category, transaction_type = transaction_type, total_amount = amount)
         session.add(db_monthly_stats)
-        logger.info('MonthlyStats object successfully created')
+        logger.info(f'MonthlyStats for user {user_id} successfully created')
     else:
         db_monthly_stats.total_amount += amount
-        logger.info('Total amount successfully increased')
+        logger.info(f'Total amount for user {user_id} successfully increased')
     monthly_stats_total = await session.execute(select(func.sum(MonthlyStats.total_amount).label('monthly_stats_total')).where(MonthlyStats.user_id == user_id, MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.transaction_type == 'Expense'))
     user_budget_limit = await session.execute(select(UserBudget).where(UserBudget.user_id == user_id))
     db_monthly_stats_total = monthly_stats_total.scalar_one_or_none()
     db_user_budget_limit = user_budget_limit.scalar_one_or_none()
     if db_monthly_stats_total is None:
-        logger.warning(f'User transactions not found')
+        logger.warning(f'User {user_id} transactions not found')
     if db_user_budget_limit is None:
-        logger.warning(f'User budget limit not found')
+        logger.warning(f'User {user_id} budget limit not found')
     if db_monthly_stats_total and db_user_budget_limit:
         if db_monthly_stats_total > db_user_budget_limit:
             await publish_analytics_events('exceed', user_id, monthly_stats_total=db_monthly_stats_total, user_budget_limit=db_user_budget_limit)
-            logger.info('User budget exceed the limit event successfully published')
+            logger.info(f'User {user_id} budget exceed the limit event successfully published')
     await session.commit()
 
 async def handle_transaction_updated(data: dict, session: AsyncSession):
@@ -80,9 +80,9 @@ async def handle_transaction_updated(data: dict, session: AsyncSession):
             new_impact = -amount
         db_monthly_stats.total_amount = db_monthly_stats.total_amount - old_impact + new_impact
         await session.commit()
-        logger.info('MonthlyStats successfully updated')
+        logger.info(f'MonthlyStats for user {user_id} successfully updated')
     else:
-        logger.warning('MonthlyStats object not found')
+        logger.warning(f'MonthlyStats for user {user_id} not found')
 
 async def handle_transaction_deleted(data: dict, session: AsyncSession):
     date = datetime.fromisoformat(data['created_at'])
@@ -96,9 +96,9 @@ async def handle_transaction_deleted(data: dict, session: AsyncSession):
         else:
             db_monthly_stats.total_amount += amount
         await session.commit()
-        logger.info('MonthlyStats successfully updated')
+        logger.info(f'MonthlyStats for user {user_id} successfully updated')
     else:
-        logger.warning('MonthlyStats object not found')
+        logger.warning(f'MonthlyStats for user {user_id} not found')
 
 async def handle_budget_limit_updated(data: dict, session: AsyncSession):
     user_id, budget_limit = data['user_id'], data['budget_limit']
@@ -107,10 +107,10 @@ async def handle_budget_limit_updated(data: dict, session: AsyncSession):
     if db_user_budget is None:
         db_user_budget = UserBudget(user_id=user_id, budget_limit=budget_limit)
         session.add(db_user_budget)
-        logger.info('Budget limit successfully added')
+        logger.info(f'Budget limit for user {user_id} successfully added')
     else:
         db_user_budget.budget_limit = budget_limit
-        logger.info('Budget limit successfully updated')
+        logger.info(f'Budget limit for user {user_id} successfully updated')
     await session.commit()
 
 async def handle_user_deleted(data: dict, session: AsyncSession):
@@ -122,10 +122,10 @@ async def handle_user_deleted(data: dict, session: AsyncSession):
     if db_user_monthly_stats:
         for monthly_stats in db_user_monthly_stats:
             await session.delete(monthly_stats)
-        logger.info('MonthlyStats objects successfully deleted')
+        logger.info(f'MonthlyStats for user {user_id} successfully deleted')
     if db_user_budget is not None:
         await session.delete(db_user_budget)
-        logger.info('UserBudget successfully deleted')
+        logger.info(f'UserBudget for user {user_id} successfully deleted')
     await session.commit()
 
 if __name__ == "__main__":

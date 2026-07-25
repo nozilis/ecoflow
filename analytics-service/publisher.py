@@ -31,4 +31,4 @@ async def publish_analytics_events(event_type, user_id, **kwargs):
     data_dict = {'user_id': user_id, **kwargs}
     message_body = json.dumps(data_dict).encode("utf-8")
     await publish_event(message_body, f'budget.{event_type}')
-    logger.info(f'Event {event_type} successfully published')
+    logger.info(f'Event {event_type} by user {user_id} successfully published')
