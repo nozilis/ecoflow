@@ -32,4 +32,4 @@ async def publish_user_events(event_type, user_id, **kwargs):
     data_dict = {'user_id': user_id, **kwargs}
     message_body = json.dumps(data_dict, default=lambda o: o.isoformat() if isinstance(o, datetime) else None).encode("utf-8")
     await publish_event(message_body, f'user.{event_type}')
-    logger.info(f'Event {event_type} successfully published')
+    logger.info(f'Event {event_type} by user {user_id} successfully published')

@@ -46,7 +46,7 @@ async def handle_user_updated(data: dict, session: AsyncSession):
         if email:
             db_user.email = email
         await session.commit()
-        logger.info('User successfully updated')
+        logger.info(f'User {user_id} successfully updated')
 
 async def handle_user_deleted(data: dict, session: AsyncSession):
     user_id = data['user_id']
@@ -57,7 +57,7 @@ async def handle_user_deleted(data: dict, session: AsyncSession):
     else:
         await session.delete(db_user)
         await session.commit()
-        logger.info('User successfully deleted')
+        logger.info(f'User {user_id} successfully deleted')
 
 if __name__ == '__main__':
     handlers = {
