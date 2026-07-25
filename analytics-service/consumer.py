@@ -39,17 +39,18 @@ async def run_consumer(handlers: dict[str, callable]):
 async def handle_transaction_created(data: dict, session: AsyncSession):
     date = datetime.fromisoformat(data['created_at'])
     year, month = date.year, date.month
-    monthly_stats_is_exist = await session.execute(select(MonthlyStats).where(MonthlyStats.user_id == data['user_id'], MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.category == data['category']))
+    user_id, category, transaction_type, amount = data['user_id'], data['category'], data['transaction_type'], data['amount']
+    monthly_stats_is_exist = await session.execute(select(MonthlyStats).where(MonthlyStats.user_id == user_id, MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.category == category))
     db_monthly_stats = monthly_stats_is_exist.scalar_one_or_none()
     if db_monthly_stats is None:
-        db_monthly_stats = MonthlyStats(user_id = data['user_id'], year = year, month = month, category = data['category'], transaction_type = data['transaction_type'], total_amount = data['amount'])
+        db_monthly_stats = MonthlyStats(user_id = user_id, year = year, month = month, category = category, transaction_type = transaction_type, total_amount = amount)
         session.add(db_monthly_stats)
         logger.info('MonthlyStats object successfully created')
     else:
-        db_monthly_stats.total_amount += data['amount']
+        db_monthly_stats.total_amount += amount
         logger.info('Total amount successfully increased')
-    monthly_stats_total = await session.execute(select(func.sum(MonthlyStats.total_amount).label('monthly_stats_total')).where(MonthlyStats.user_id == data['user_id'], MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.transaction_type == 'Expense'))
-    user_budget_limit = await session.execute(select(UserBudget).where(UserBudget.user_id == data['user_id']))
+    monthly_stats_total = await session.execute(select(func.sum(MonthlyStats.total_amount).label('monthly_stats_total')).where(MonthlyStats.user_id == user_id, MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.transaction_type == 'Expense'))
+    user_budget_limit = await session.execute(select(UserBudget).where(UserBudget.user_id == user_id))
     db_monthly_stats_total = monthly_stats_total.scalar_one_or_none()
     db_user_budget_limit = user_budget_limit.scalar_one_or_none()
     if db_monthly_stats_total is None:
@@ -58,24 +59,25 @@ async def handle_transaction_created(data: dict, session: AsyncSession):
         logger.info('User budget limit not found')
     if db_monthly_stats_total and db_user_budget_limit:
         if db_monthly_stats_total > db_user_budget_limit:
-            await publish_analytics_events('exceed', data['user_id'], monthly_stats_total=db_monthly_stats_total, user_budget_limit=db_user_budget_limit)
+            await publish_analytics_events('exceed', user_id, monthly_stats_total=db_monthly_stats_total, user_budget_limit=db_user_budget_limit)
             logger.info('User budget exceed the limit event successfully published')
     await session.commit()
 
 async def handle_transaction_updated(data: dict, session: AsyncSession):
     date = datetime.fromisoformat(data['created_at'])
     year, month = date.year, date.month
-    monthly_stats_is_exist = await session.execute(select(MonthlyStats).where(MonthlyStats.user_id == data['user_id'], MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.category == data['category']))
+    user_id, category, transaction_type, amount, recent_type, recent_amount = data['user_id'], data['category'], data['transaction_type'], data['amount'], data['recent_type'], data['recent_amount']
+    monthly_stats_is_exist = await session.execute(select(MonthlyStats).where(MonthlyStats.user_id == user_id, MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.category == category))
     db_monthly_stats = monthly_stats_is_exist.scalar_one_or_none()
     if db_monthly_stats:
-        if data['recent_type'] == 'Income':
-            old_impact = data['recent_amount']
+        if recent_type == 'Income':
+            old_impact = recent_amount
         else:
-            old_impact = -data['recent_amount']
-        if data['transaction_type'] == 'Income':
-            new_impact = data['amount']
+            old_impact = -recent_amount
+        if transaction_type == 'Income':
+            new_impact = amount
         else:
-            new_impact = -data['amount']
+            new_impact = -amount
         db_monthly_stats.total_amount = db_monthly_stats.total_amount - old_impact + new_impact
         await session.commit()
         logger.info('MonthlyStats successfully updated')
@@ -85,13 +87,14 @@ async def handle_transaction_updated(data: dict, session: AsyncSession):
 async def handle_transaction_deleted(data: dict, session: AsyncSession):
     date = datetime.fromisoformat(data['created_at'])
     year, month = date.year, date.month
-    monthly_stats_is_exist = await session.execute(select(MonthlyStats).where(MonthlyStats.user_id == data['user_id'], MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.category == data['category']))
+    user_id, category, transaction_type, amount = data['user_id'], data['category'], data['transaction_type'], data['amount']
+    monthly_stats_is_exist = await session.execute(select(MonthlyStats).where(MonthlyStats.user_id == user_id, MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.category == category))
     db_monthly_stats = monthly_stats_is_exist.scalar_one_or_none()
     if db_monthly_stats:
-        if data['transaction_type'] == 'Income':
-            db_monthly_stats.total_amount -= data['amount']
+        if transaction_type == 'Income':
+            db_monthly_stats.total_amount -= amount
         else:
-            db_monthly_stats.total_amount += data['amount']
+            db_monthly_stats.total_amount += amount
         await session.commit()
         logger.info('MonthlyStats successfully updated')
     else:
