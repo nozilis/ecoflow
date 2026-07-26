@@ -8,9 +8,9 @@ logger = logging.getLogger(__name__)
 
 SERVICE_MAP = {
         'auth': 'http://auth_service:8000',
-        'transaction': 'http://transaction_service:8000',
+        'transactions': 'http://transaction_service:8000',
         'analytics': 'http://analytics_service:8000',
-        'user': 'http://user_service:8000',
+        'user_profile': 'http://user_service:8000',
     }
 
 @asynccontextmanager
