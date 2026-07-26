@@ -55,6 +55,18 @@ services:
         condition: service_healthy
       postgres_user:
         condition: service_started
+  gateway_service:
+    build: ./gateway-service
+    restart: always
+    volumes:
+    - ./gateway-service:/code
+    ports:
+      - "8004:8000"
+    depends_on:
+      - auth_service
+      - transaction_service
+      - analytics_service
+      - user_service
   analytics_service_consumer:
     build: ./analytics-service
     env_file: 
