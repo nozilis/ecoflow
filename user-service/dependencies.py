@@ -5,6 +5,9 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from decouple import config
 from fastapi import HTTPException, status, Depends
+import logging
+
+logger = logging.getLogger(__name__)
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
@@ -19,6 +22,7 @@ def decode_token(token: str):
         payload = jwt.decode(token, config('SECRET_KEY'), algorithms=[ALGORITHM])
         return payload
     except JWTError:    
+        logger.warning('Failed to decode the token')
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",

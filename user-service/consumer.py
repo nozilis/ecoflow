@@ -44,7 +44,7 @@ async def handle_user_created(data: dict, session: AsyncSession):
         await session.commit()
         logger.info(f'User profile for user {username} successfully created')
     else:
-        logger.info(f"User profile for user {username} already exists in UserProfile, skipping")
+        logger.warning(f"User profile for user {username} already exists in UserProfile, skipping")
 
 if __name__ == "__main__":
     handlers = {
