@@ -6,6 +6,9 @@ from schemas import TransactionCreate, TransactionResponse, TransactionUpdate
 from sqlalchemy import select
 from enums import TransactionType, ExpenseCategory, IncomeCategory
 from publisher import publish_transaction_events
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix='/transactions',
@@ -18,6 +21,7 @@ async def create_transaction(transaction: TransactionCreate, user_id: int = Depe
     db.add(create_transaction)
     await db.commit()
     await db.refresh(create_transaction)
+    logger.info(f'Transaction {create_transaction.id} by user {user_id} successfully created')
     await publish_transaction_events('created', user_id, amount=transaction.amount, transaction_type=transaction.transaction_type, category=transaction.category, created_at=create_transaction.created_at)
     return TransactionResponse.model_validate(create_transaction)
 
@@ -32,9 +36,11 @@ async def delete_transaction(transaction_id: int, user_id: int = Depends(get_cur
     transaction_is_exist = await db.execute(select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == user_id)) 
     db_transaction = transaction_is_exist.scalar_one_or_none()
     if db_transaction is None:
+        logger.warning(f'Transaction {transaction_id} not found')
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Транзакция не найдена')
     await db.delete(db_transaction)
     await db.commit()
+    logger.info(f'Transaction {transaction_id} successfully deleted')
     await publish_transaction_events('deleted', user_id, amount=db_transaction.amount, transaction_type=db_transaction.transaction_type, category=db_transaction.category, created_at=db_transaction.created_at)
 
 @router.patch('/{transaction_id}', status_code=status.HTTP_200_OK)
@@ -42,6 +48,7 @@ async def update_transaction(transaction_id: int, transaction_update_request: Tr
     transaction_is_exist = await db.execute(select(Transaction).where(Transaction.user_id == user_id, Transaction.id == transaction_id))
     db_transaction = transaction_is_exist.scalar_one_or_none()
     if db_transaction is None:
+        logger.warning(f'Transaction {transaction_id} not found')
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Транзакция не найдена')
     recent_amount, recent_type = db_transaction.amount, db_transaction.transaction_type
     transaction_update_dump = transaction_update_request.model_dump(exclude_unset=True)
@@ -57,5 +64,6 @@ async def update_transaction(transaction_id: int, transaction_update_request: Tr
     for item, value in transaction_update_dump_items:
         setattr(db_transaction, item, value)
     await db.commit()
+    logger.info(f'Transaction {transaction_id} successfully updated')
     await publish_transaction_events('updated', user_id, amount=transaction_update_dump.get('amount', db_transaction.amount), transaction_type=transaction_update_dump.get('transaction_type', db_transaction.transaction_type), category=transaction_update_dump.get('category', db_transaction.category), created_at=db_transaction.created_at, recent_amount=recent_amount, recent_type=recent_type)
     return TransactionResponse.model_validate(db_transaction)

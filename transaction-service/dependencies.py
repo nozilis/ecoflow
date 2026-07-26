@@ -5,6 +5,9 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import AsyncGenerator
 from database import async_session_maker
+import logging
+
+logger = logging.getLogger(__name__)
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]: 
     async with async_session_maker() as session:
@@ -18,7 +21,8 @@ def decode_token(token: str):
     try:
         payload = jwt.decode(token, config('SECRET_KEY'), algorithms=[ALGORITHM])
         return payload
-    except JWTError:    
+    except JWTError:  
+        logger.warning('Failed to decode the token')  
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
