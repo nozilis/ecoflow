@@ -8,6 +8,7 @@ from decouple import config
 from sqlalchemy import select
 from models import User
 from jwt_token import ALGORITHM
+from services.auth_core import AuthService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -39,3 +40,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
         logger.warning(f'User {user_id} not found')
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return db_user
+
+async def get_auth_service(
+    db: AsyncSession = Depends(get_db)
+) -> AuthService:
+    return AuthService(db)
