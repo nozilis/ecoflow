@@ -5,6 +5,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from decouple import config
 from fastapi import HTTPException, status, Depends
+from services.analytics_core import AnalyticsService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -33,3 +34,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     payload = decode_token(token)
     user_id = int(payload.get("sub"))
     return user_id
+
+async def get_analytics_service(
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user)
+) -> AnalyticsService:
+    return AnalyticsService(db, user_id)
