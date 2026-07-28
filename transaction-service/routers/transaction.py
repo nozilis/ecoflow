@@ -1,14 +1,7 @@
 from fastapi import APIRouter, status, Depends, HTTPException
-from dependencies import get_current_user, get_db
-from sqlalchemy.ext.asyncio import AsyncSession
-from models import Transaction
+from dependencies import get_transaction_service
 from schemas import TransactionCreate, TransactionResponse, TransactionUpdate
-from sqlalchemy import select
-from enums import TransactionType, ExpenseCategory, IncomeCategory
-from publisher import publish_transaction_events
-import logging
-
-logger = logging.getLogger(__name__)
+from services.transaction_core import TransactionService, TransactionNotFound, InvalidCategory
 
 router = APIRouter(
     prefix='/transactions',
@@ -16,54 +9,53 @@ router = APIRouter(
 )
 
 @router.post('/', status_code=status.HTTP_201_CREATED)
-async def create_transaction(transaction: TransactionCreate, user_id: int = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    create_transaction = Transaction(user_id = user_id, amount = transaction.amount, transaction_type = transaction.transaction_type, category = transaction.category, description = transaction.description)
-    db.add(create_transaction)
-    await db.commit()
-    await db.refresh(create_transaction)
-    logger.info(f'Transaction {create_transaction.id} by user {user_id} successfully created')
-    await publish_transaction_events('created', user_id, amount=transaction.amount, transaction_type=transaction.transaction_type, category=transaction.category, created_at=create_transaction.created_at)
-    return TransactionResponse.model_validate(create_transaction)
+async def create_transaction(
+    transaction: TransactionCreate, 
+    transaction_service: TransactionService = Depends(get_transaction_service)
+) -> TransactionResponse:
+    created_transaction = await transaction_service.create_transaction(
+        amount=transaction.amount, 
+        transaction_type=transaction.transaction_type,
+        category=transaction.category,
+        description=transaction.description,
+        )
+    return TransactionResponse.model_validate(created_transaction)
 
 @router.get('/', status_code=status.HTTP_200_OK)
-async def get_transactions(user_id: int = Depends(get_current_user), db: AsyncSession = Depends(get_db), page: int = 1, page_size: int = 20):
-    transactions = await db.execute(select(Transaction).where(Transaction.user_id == user_id).limit(page_size).offset((page-1)*page_size))
-    db_transactions = transactions.scalars().all()
-    return [TransactionResponse.model_validate(t) for t in db_transactions]
+async def get_transactions(
+    transaction_service: TransactionService = Depends(get_transaction_service),
+    page: int = 1, 
+    page_size: int = 20
+) -> list[TransactionResponse]:
+    transactions = await transaction_service.get_transactions(
+        page=page, 
+        page_size=page_size
+        )
+    return [TransactionResponse.model_validate(t) for t in transactions]
 
 @router.delete('/{transaction_id}', status_code=status.HTTP_204_NO_CONTENT)
-async def delete_transaction(transaction_id: int, user_id: int = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    transaction_is_exist = await db.execute(select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == user_id)) 
-    db_transaction = transaction_is_exist.scalar_one_or_none()
-    if db_transaction is None:
-        logger.warning(f'Transaction {transaction_id} not found')
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Транзакция не найдена')
-    await db.delete(db_transaction)
-    await db.commit()
-    logger.info(f'Transaction {transaction_id} successfully deleted')
-    await publish_transaction_events('deleted', user_id, amount=db_transaction.amount, transaction_type=db_transaction.transaction_type, category=db_transaction.category, created_at=db_transaction.created_at)
+async def delete_transaction(
+    transaction_id: int, 
+    transaction_service: TransactionService = Depends(get_transaction_service)
+):
+    try:
+        await transaction_service.delete_transaction(transaction_id=transaction_id)
+    except TransactionNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'{exc}')
 
 @router.patch('/{transaction_id}', status_code=status.HTTP_200_OK)
-async def update_transaction(transaction_id: int, transaction_update_request: TransactionUpdate, user_id: int = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    transaction_is_exist = await db.execute(select(Transaction).where(Transaction.user_id == user_id, Transaction.id == transaction_id))
-    db_transaction = transaction_is_exist.scalar_one_or_none()
-    if db_transaction is None:
-        logger.warning(f'Transaction {transaction_id} not found')
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Транзакция не найдена')
-    recent_amount, recent_type = db_transaction.amount, db_transaction.transaction_type
-    transaction_update_dump = transaction_update_request.model_dump(exclude_unset=True)
-    final_type = transaction_update_request.transaction_type if transaction_update_request.transaction_type is not None else db_transaction.transaction_type
-    final_category = transaction_update_dump.get('category', db_transaction.category)
-    if final_type == TransactionType.EXPENSE:
-        if final_category not in [category for category in ExpenseCategory]:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail='Категория транзакции заполнена неверно!')
-    else:
-        if final_category not in [category for category in IncomeCategory]:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail='Категория транзакции заполнена неверно!')
-    transaction_update_dump_items = transaction_update_dump.items()
-    for item, value in transaction_update_dump_items:
-        setattr(db_transaction, item, value)
-    await db.commit()
-    logger.info(f'Transaction {transaction_id} successfully updated')
-    await publish_transaction_events('updated', user_id, amount=transaction_update_dump.get('amount', db_transaction.amount), transaction_type=transaction_update_dump.get('transaction_type', db_transaction.transaction_type), category=transaction_update_dump.get('category', db_transaction.category), created_at=db_transaction.created_at, recent_amount=recent_amount, recent_type=recent_type)
-    return TransactionResponse.model_validate(db_transaction)
+async def update_transaction(
+    transaction_id: int, 
+    transaction_update_request: TransactionUpdate,
+    transaction_service: TransactionService = Depends(get_transaction_service)
+) -> TransactionResponse:
+    try:
+        updated_transaction = await transaction_service.update_transaction(
+            transaction_id=transaction_id,
+            transaction_update_request=transaction_update_request
+            )
+    except TransactionNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'{exc}')
+    except InvalidCategory as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=f'{exc}')
+    return TransactionResponse.model_validate(updated_transaction)
