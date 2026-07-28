@@ -1,15 +1,7 @@
 from fastapi import APIRouter, Depends, status, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from dependencies import get_db, get_current_user
-from sqlalchemy import select
-from models import UserProfile
+from dependencies import get_user_profile_service
 from schemas import UserProfileResponse, UserProfileUpdate
-from enums import VisibilityChoice
-from publisher import publish_user_events
-from sqlalchemy.exc import IntegrityError
-import logging
-
-logger = logging.getLogger(__name__)
+from services.user_profile_core import UserProfileService, UserProfileNotFound, UsernameConflict, EmailConflict, UsernameAndEmailConflict
 
 router = APIRouter(
     prefix='/user_profile',
@@ -17,67 +9,38 @@ router = APIRouter(
 )
 
 @router.get('/', status_code=status.HTTP_200_OK)
-async def get_user_profile(user_id: int = None, db: AsyncSession = Depends(get_db), request_user: int = Depends(get_current_user)):
-    if user_id is None:
-        user_id = request_user
-    user_profile_is_exist = await db.execute(select(UserProfile).where(UserProfile.user_id == user_id))
-    db_user_profile = user_profile_is_exist.scalar_one_or_none()
-    if db_user_profile is None:
-        logger.warning(f'User profile for user {user_id} not found')
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
-    else:
-        if db_user_profile.visibility_choice == VisibilityChoice.PRIVATE and request_user != user_id:
-            logger.warning(f'User profile for user {user_id} visibility choice is private and request user is not owner of this account')
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
-        return UserProfileResponse.model_validate(db_user_profile)
+async def get_user_profile(
+    user_id: int = None, 
+    user_profile_service: UserProfileService = Depends(get_user_profile_service)
+) -> UserProfileResponse:
+    try:
+        user_profile = await user_profile_service.get_user_profile(user_id=user_id)
+        return UserProfileResponse.model_validate(user_profile)
+    except UserProfileNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'{exc}')
 
 @router.patch('/', status_code=status.HTTP_200_OK)
-async def update_user_profile(user_profile_update_request: UserProfileUpdate, db: AsyncSession = Depends(get_db), request_user: int = Depends(get_current_user)):
-    user_profile_is_exist = await db.execute(select(UserProfile).where(UserProfile.user_id == request_user))
-    db_user_profile = user_profile_is_exist.scalar_one_or_none()
-    if db_user_profile is None:
-        logger.warning(f'User profile for user {request_user} not found')
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
-    user_profile_update_dump = user_profile_update_request.model_dump(exclude_unset=True)
-    if user_profile_update_dump.get('username') is not None:
-        username_is_already_exist = await db.execute(select(UserProfile).where(UserProfile.username == user_profile_update_dump.get('username')))
-        db_username_is_already_exist = username_is_already_exist.scalar_one_or_none()
-        if db_username_is_already_exist is not None:
-            logger.warning(f'Username {user_profile_update_dump.get("username")} is already taken')
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Username is already exist')
-    if user_profile_update_dump.get('email') is not None:
-        email_is_already_exist = await db.execute(select(UserProfile).where(UserProfile.email == user_profile_update_dump.get('email')))
-        db_email_is_already_exist = email_is_already_exist.scalar_one_or_none()
-        if db_email_is_already_exist is not None:
-            logger.warning(f'Email {user_profile_update_dump.get("email")} is already taken')
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Email is already exist')
-    user_profile_update_dump_items = user_profile_update_dump.items()
-    for item, value in user_profile_update_dump_items:
-        setattr(db_user_profile, item, value)
+async def update_user_profile(
+    user_profile_update_request: UserProfileUpdate, 
+    user_profile_service: UserProfileService = Depends(get_user_profile_service)
+) -> UserProfileResponse:
     try:
-        await db.commit()
-        logger.info(f'User profile for user {request_user} successfully updated')
-        if 'username' in user_profile_update_dump or 'email' in user_profile_update_dump:
-            await publish_user_events('updated', request_user, **{k: v for k, v in user_profile_update_dump_items if k in {'username', 'email'}})
-        if 'budget_limit' in user_profile_update_dump:
-            await publish_user_events('budget_limit_updated', request_user, budget_limit=user_profile_update_dump.get('budget_limit'))
-        if 'monthly_budget_exceeded_notification' in user_profile_update_dump or 'weekly_summary_notification' in user_profile_update_dump:
-            await publish_user_events('settings.updated', request_user, **{k: v for k, v in user_profile_update_dump_items if k in {'monthly_budget_exceeded_notification', 'weekly_summary_notification'}})
-        return UserProfileResponse.model_validate(db_user_profile)
-    except IntegrityError as e:
-        pg_code = e.orig.diag.message_detail
-        await db.rollback()
-        logger.error(f'IntegrityError during user updating: {pg_code}')
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'Username or email is already taken')
+        user_profile = await user_profile_service.update_user_profile(user_profile_update_request=user_profile_update_request)
+        return UserProfileResponse.model_validate(user_profile)
+    except UserProfileNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'{exc}')
+    except UsernameConflict as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'{exc}')
+    except EmailConflict as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'{exc}')
+    except UsernameAndEmailConflict as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'{exc}')
 
 @router.delete('/', status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user_profile(db: AsyncSession = Depends(get_db), request_user: int = Depends(get_current_user)):
-    user_profile_is_exist = await db.execute(select(UserProfile).where(UserProfile.user_id == request_user))
-    db_user_profile = user_profile_is_exist.scalar_one_or_none()
-    if db_user_profile is None:
-        logger.warning(f'User profile for user {request_user} not found')
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='User not found')
-    await db.delete(db_user_profile)
-    await db.commit()
-    logger.info(f'User profile for user {request_user} successfully deleted')
-    await publish_user_events('deleted', request_user)
+async def delete_user_profile(
+    user_profile_service: UserProfileService = Depends(get_user_profile_service)
+):
+    try:
+        await user_profile_service.delete_user_profile()
+    except UserProfileNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'{exc}')
