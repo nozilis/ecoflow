@@ -5,6 +5,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from decouple import config
 from fastapi import HTTPException, status, Depends
+from services.user_profile_core import UserProfileService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -33,3 +34,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     payload = decode_token(token)
     user_id = int(payload.get("sub"))
     return user_id
+
+async def get_user_profile_service(
+    db: AsyncSession = Depends(get_db),
+    request_user: int = Depends(get_current_user)
+) -> UserProfileService:
+    return UserProfileService(db, request_user)
