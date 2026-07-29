@@ -3,12 +3,8 @@ import aio_pika
 from decouple import config
 import json
 from database import async_session_maker
-import logging
-from sqlalchemy import select
-from models import UserProfile
 from sqlalchemy.ext.asyncio import AsyncSession
-
-logger = logging.getLogger(__name__)
+from services.user_profile_consumer_core import UserProfileConsumerService
 
 async def run_consumer(handlers: dict[str, callable]):
     connection = await aio_pika.connect_robust(
@@ -34,17 +30,12 @@ async def run_consumer(handlers: dict[str, callable]):
                         async with async_session_maker() as session: 
                             await handler(data, session)
 
-async def handle_user_created(data: dict, session: AsyncSession):
-    user_id, username, email = data['id'], data['username'], data['email']
-    user_profile_is_exist = await session.execute(select(UserProfile).where(UserProfile.username == username))
-    db_user_profile = user_profile_is_exist.scalar_one_or_none()
-    if db_user_profile is None:
-        create_user_profile = UserProfile(user_id = user_id, username = username, email = email)
-        session.add(create_user_profile)
-        await session.commit()
-        logger.info(f'User profile for user {username} successfully created')
-    else:
-        logger.warning(f"User profile for user {username} already exists in UserProfile, skipping")
+async def handle_user_created(
+    data: dict, 
+    session: AsyncSession
+):
+    user_profile_consumer_service = UserProfileConsumerService(data, session)
+    await user_profile_consumer_service.handle_user_created()
 
 if __name__ == "__main__":
     handlers = {
