@@ -3,12 +3,8 @@ import aio_pika
 from decouple import config
 import json
 from database import async_session_maker
-import logging
-from sqlalchemy import select
-from models import User
 from sqlalchemy.ext.asyncio import AsyncSession
-
-logger = logging.getLogger(__name__)
+from services.auth_consumer_core import AuthConsumerService
 
 async def run_consumer(handlers: dict[str, callable]):
     connection = await aio_pika.connect_robust(
@@ -34,30 +30,19 @@ async def run_consumer(handlers: dict[str, callable]):
                         async with async_session_maker() as session: 
                             await handler(data, session)
 
-async def handle_user_updated(data: dict, session: AsyncSession):
-    user_id, username, email = data['user_id'], data.get('username'), data.get('email')
-    user_is_exist = await session.execute(select(User).where(User.id == user_id))
-    db_user = user_is_exist.scalar_one_or_none()
-    if db_user is None:
-        logger.warning(f'User {user_id} not found')
-    else:
-        if username:
-            db_user.username = username
-        if email:
-            db_user.email = email
-        await session.commit()
-        logger.info(f'User {user_id} successfully updated')
+async def handle_user_updated(
+    data: dict, 
+    session: AsyncSession
+):
+    auth_consumer_service = AuthConsumerService(data, session)
+    await auth_consumer_service.handle_user_updated()
 
-async def handle_user_deleted(data: dict, session: AsyncSession):
-    user_id = data['user_id']
-    user_is_exist = await session.execute(select(User).where(User.id == user_id))
-    db_user = user_is_exist.scalar_one_or_none()
-    if db_user is None:
-        logger.warning(f'User {user_id} not found')
-    else:
-        await session.delete(db_user)
-        await session.commit()
-        logger.info(f'User {user_id} successfully deleted')
+async def handle_user_deleted(
+    data: dict, 
+    session: AsyncSession
+):
+    auth_consumer_service = AuthConsumerService(data, session)
+    await auth_consumer_service.handle_user_deleted()
 
 if __name__ == '__main__':
     handlers = {
