@@ -3,11 +3,8 @@ import aio_pika
 from decouple import config
 import json
 from database import async_session_maker
-import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from services.analytics_consumer_core import AnalyticsConsumerService
-
-logger = logging.getLogger(__name__)
 
 async def run_consumer(handlers: dict[str, callable]):
     connection = await aio_pika.connect_robust(
