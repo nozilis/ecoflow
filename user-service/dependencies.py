@@ -30,12 +30,12 @@ def decode_token(token: str):
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+def get_current_user(token: str = Depends(oauth2_scheme)):
     payload = decode_token(token)
     user_id = int(payload.get("sub"))
     return user_id
 
-async def get_user_profile_service(
+def get_user_profile_service(
     db: AsyncSession = Depends(get_db),
     request_user: int = Depends(get_current_user)
 ) -> UserProfileService:
