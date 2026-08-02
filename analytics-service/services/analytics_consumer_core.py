@@ -7,9 +7,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 class AnalyticsConsumerService:
-    def __init__(self, data, session):
+    def __init__(self, data, session, redis):
         self.data = data
         self.session = session
+        self.redis = redis
 
     async def handle_transaction_created(self):
         date = datetime.fromisoformat(self.data['created_at'])
@@ -37,6 +38,7 @@ class AnalyticsConsumerService:
                 await publish_analytics_events('exceed', user_id, monthly_stats_total=db_monthly_stats_total, user_budget_limit=db_user_budget_limit)
                 logger.info(f'User {user_id} budget exceed the limit event successfully published')
         await self.session.commit()
+        await self.cache_delete_handle()
 
     async def handle_transaction_updated(self):
         date = datetime.fromisoformat(self.data['created_at'])
@@ -56,6 +58,7 @@ class AnalyticsConsumerService:
             db_monthly_stats.total_amount = db_monthly_stats.total_amount - old_impact + new_impact
             await self.session.commit()
             logger.info(f'MonthlyStats for user {user_id} successfully updated')
+            await self.cache_delete_handle()
         else:
             logger.warning(f'MonthlyStats for user {user_id} not found')
 
@@ -72,6 +75,7 @@ class AnalyticsConsumerService:
                 db_monthly_stats.total_amount += amount
             await self.session.commit()
             logger.info(f'MonthlyStats for user {user_id} successfully updated')
+            await self.cache_delete_handle()
         else:
             logger.warning(f'MonthlyStats for user {user_id} not found')
 
@@ -102,3 +106,23 @@ class AnalyticsConsumerService:
             await self.session.delete(db_user_budget)
             logger.info(f'UserBudget for user {user_id} successfully deleted')
         await self.session.commit()
+        async for cache_key in self.redis.scan_iter(match=f'*_stats:{user_id}:*'):
+            await self.redis.delete(cache_key)
+        logger.info(f'Cache for user {user_id} successfully deleted')
+
+    async def cache_delete_handle(self):
+        date = datetime.fromisoformat(self.data['created_at'])
+        year, month = date.year, date.month
+        user_id = self.data['user_id']
+        monthly_cache_key = f'monthly_stats:{user_id}:{month}:{year}'
+        await self.redis.delete(monthly_cache_key)
+        logger.info(f'Cache with key {monthly_cache_key} successfully deleted')
+        yearly_cache_key = f'yearly_stats:{user_id}:{year}'
+        await self.redis.delete(yearly_cache_key)
+        logger.info(f'Cache with key {yearly_cache_key} successfully deleted')
+        transaction_point = year * 12 + month
+        async for range_cache_key in self.redis.scan_iter(match=f'range_stats:{user_id}:*'):
+            _, _, start, end = range_cache_key.split(':')
+            if int(start) <= transaction_point <= int(end):
+                await self.redis.delete(range_cache_key)
+                logger.info(f'Cache with key {range_cache_key} successfully deleted')
