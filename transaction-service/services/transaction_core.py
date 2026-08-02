@@ -2,14 +2,17 @@ from models import Transaction
 from sqlalchemy import select
 from enums import TransactionType, ExpenseCategory, IncomeCategory
 from publisher import publish_transaction_events
+from schemas import TransactionResponse
+import json
 import logging
 
 logger = logging.getLogger(__name__)
 
 class TransactionService:
-    def __init__(self, db, user_id):
+    def __init__(self, db, user_id, redis):
         self.db = db
         self.user_id = user_id
+        self.redis = redis
 
     async def create_transaction(self, amount, transaction_type, category, description):
         create_transaction = Transaction(
@@ -23,6 +26,7 @@ class TransactionService:
         await self.db.commit()
         await self.db.refresh(create_transaction)
         logger.info(f'Transaction {create_transaction.id} by user {self.user_id} successfully created')
+
         await publish_transaction_events(
                 'created', 
                 self.user_id, 
@@ -31,12 +35,21 @@ class TransactionService:
                 category=category, 
                 created_at=create_transaction.created_at
                 )
+        await self.cache_delete_handle()
         return create_transaction
 
     async def get_transactions(self, page, page_size):
+        cache_key = f'transactions:{self.user_id}:{page}:{page_size}'
+        cached_data = await self.redis.get(cache_key)
+        if cached_data is not None:
+            data = json.loads(cached_data)
+            return data
         transactions = await self.db.execute(select(Transaction).where(Transaction.user_id == self.user_id).limit(page_size).offset((page-1)*page_size))
         get_transactions = transactions.scalars().all()
-        return get_transactions
+        db_transactions = [TransactionResponse.model_validate(item).model_dump() for item in get_transactions]
+        data_to_cache = json.dumps(db_transactions)
+        await self.redis.set(cache_key, data_to_cache, 300)
+        return db_transactions
 
     async def delete_transaction(self, transaction_id):
         transaction_is_exist = await self.db.execute(select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == self.user_id)) 
@@ -55,6 +68,7 @@ class TransactionService:
                 category=db_transaction.category, 
                 created_at=db_transaction.created_at
                 )
+        await self.cache_delete_handle()
 
     async def update_transaction(self, transaction_id, transaction_update_request):
         transaction_is_exist = await self.db.execute(select(Transaction).where(Transaction.user_id == self.user_id, Transaction.id == transaction_id))
@@ -86,7 +100,13 @@ class TransactionService:
             created_at=db_transaction.created_at, 
             recent_amount=recent_amount, 
             recent_type=recent_type)
+        await self.cache_delete_handle()
         return db_transaction   
+
+    async def cache_delete_handle(self):
+        async for cache_key in self.redis.scan_iter(match=f'transactions:{self.user_id}:*'):
+            await self.redis.delete(cache_key)
+            logger.info(f'Cache with key {cache_key} successfully deleted')
 
 class TransactionNotFound(Exception):
     pass
