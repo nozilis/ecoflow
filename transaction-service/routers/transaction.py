@@ -31,7 +31,7 @@ async def get_transactions(
         page=page, 
         page_size=page_size
         )
-    return [TransactionResponse.model_validate(t) for t in transactions]
+    return transactions
 
 @router.delete('/{transaction_id}', status_code=status.HTTP_204_NO_CONTENT)
 async def delete_transaction(
