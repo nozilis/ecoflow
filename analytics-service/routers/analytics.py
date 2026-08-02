@@ -1,11 +1,7 @@
 from fastapi import APIRouter, status, Depends
-from dependencies import get_analytics_service
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from models import MonthlyStats
+from dependencies import get_analytics_service, get_redis
 from schemas import MonthlyStatsResponse, YearlyStatsResponse, RangeStatsResponse
 from services.analytics_core import AnalyticsService
-from datetime import datetime
 
 router = APIRouter(
     prefix='/analytics',
@@ -16,13 +12,13 @@ router = APIRouter(
 async def get_monthly_stats(
     month: int = None, 
     year: int = None, 
-    analytics_service: AnalyticsService = Depends(get_analytics_service)
+    analytics_service: AnalyticsService = Depends(get_analytics_service),
 ) -> list[MonthlyStatsResponse]:
     monthly_stats = await analytics_service.get_monthly_stats(
         month=month, 
         year=year
         )
-    return [MonthlyStatsResponse.model_validate(s) for s in monthly_stats]
+    return monthly_stats
 
 @router.get('/yearly_stats', status_code=status.HTTP_200_OK)
 async def get_yearly_stats(
@@ -30,7 +26,7 @@ async def get_yearly_stats(
     analytics_service: AnalyticsService = Depends(get_analytics_service)
 ) -> list[YearlyStatsResponse]:
     yearly_stats = await analytics_service.get_yearly_stats(year=year)
-    return [YearlyStatsResponse.model_validate(row) for row in yearly_stats.mappings().all()]
+    return yearly_stats
 
 @router.get('/range_stats', status_code=status.HTTP_200_OK)
 async def get_range_stats(
@@ -46,4 +42,4 @@ async def get_range_stats(
         end_year=end_year,
         end_month=end_month
         )
-    return [RangeStatsResponse.model_validate(row) for row in range_stats.mappings().all()]
+    return range_stats
