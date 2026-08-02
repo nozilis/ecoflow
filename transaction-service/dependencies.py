@@ -1,17 +1,22 @@
 from jose import jwt, JWTError
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, status, Depends, Request
 from decouple import config
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import AsyncGenerator
 from database import async_session_maker
 from services import TransactionService
+from redis.asyncio import Redis
 import logging
 
 logger = logging.getLogger(__name__)
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]: 
     async with async_session_maker() as session:
+        yield session
+
+async def get_redis(request: Request):
+    async with Redis(connection_pool=request.app.state.redis_pool) as session:
         yield session
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -36,7 +41,8 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     return user_id
 
 def get_transaction_service(
-        db: AsyncSession = Depends(get_db),
-        user_id: int = Depends(get_current_user) 
+    db: AsyncSession = Depends(get_db),
+    user_id: int = Depends(get_current_user),
+    redis: Redis = Depends(get_redis)
 ) -> TransactionService:
-    return TransactionService(db, user_id)
+    return TransactionService(db, user_id, redis)
