@@ -10,10 +10,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 class UserProfileService:
-    def __init__(self, db, request_user, redis):
+    def __init__(self, db, request_user, redis, rabbitmq):
         self.db = db
         self.request_user = request_user
         self.redis = redis
+        self.rabbitmq = rabbitmq
 
     async def get_user_profile(self, user_id):
         user_id = user_id or self.request_user
@@ -64,11 +65,11 @@ class UserProfileService:
             await self.cache_delete_handle(self.request_user)
             logger.info(f'User profile for user {self.request_user} successfully updated')
             if 'username' in user_profile_update_dump or 'email' in user_profile_update_dump:
-                await publish_user_events('updated', self.request_user, **{k: v for k, v in user_profile_update_dump_items if k in {'username', 'email'}})
+                await publish_user_events('updated', self.request_user, self.rabbitmq, **{k: v for k, v in user_profile_update_dump_items if k in {'username', 'email'}})
             if 'budget_limit' in user_profile_update_dump:
-                await publish_user_events('budget_limit_updated', self.request_user, budget_limit=user_profile_update_dump.get('budget_limit'))
+                await publish_user_events('budget_limit_updated', self.request_user, self.rabbitmq, budget_limit=user_profile_update_dump.get('budget_limit'))
             if 'monthly_budget_exceeded_notification' in user_profile_update_dump or 'weekly_summary_notification' in user_profile_update_dump:
-                await publish_user_events('settings.updated', self.request_user, **{k: v for k, v in user_profile_update_dump_items if k in {'monthly_budget_exceeded_notification', 'weekly_summary_notification'}})
+                await publish_user_events('settings.updated', self.request_user, self.rabbitmq, **{k: v for k, v in user_profile_update_dump_items if k in {'monthly_budget_exceeded_notification', 'weekly_summary_notification'}})
             return db_user_profile
         except IntegrityError as e:
             pg_code = e.orig.diag.message_detail
@@ -86,7 +87,7 @@ class UserProfileService:
         await self.db.commit()
         logger.info(f'User profile for user {self.request_user} successfully deleted')
         await self.cache_delete_handle(self.request_user)
-        await publish_user_events('deleted', self.request_user)
+        await publish_user_events('deleted', self.request_user, self.rabbitmq)
 
     async def cache_delete_handle(self, user_id):
         cache_key = f'user_profile:{user_id}'
