@@ -12,7 +12,7 @@ class AnalyticsConsumerService:
         self.session = session
         self.redis = redis
 
-    async def handle_transaction_created(self):
+    async def handle_transaction_created(self, rabbitmq):
         date = datetime.fromisoformat(self.data['created_at'])
         year, month = date.year, date.month
         user_id, category, transaction_type, amount = self.data['user_id'], self.data['category'], self.data['transaction_type'], self.data['amount']
@@ -35,7 +35,7 @@ class AnalyticsConsumerService:
             logger.warning(f'User {user_id} budget limit not found')
         if db_monthly_stats_total and db_user_budget_limit:
             if db_monthly_stats_total > db_user_budget_limit:
-                await publish_analytics_events('exceed', user_id, monthly_stats_total=db_monthly_stats_total, user_budget_limit=db_user_budget_limit)
+                await publish_analytics_events('exceed', user_id, rabbitmq, monthly_stats_total=db_monthly_stats_total, user_budget_limit=db_user_budget_limit)
                 logger.info(f'User {user_id} budget exceed the limit event successfully published')
         await self.session.commit()
         await self.cache_delete_handle()
