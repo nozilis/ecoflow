@@ -5,9 +5,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 class TransactionConsumerService:
-    def __init__(self, data, session):
+    def __init__(self, data, session, redis):
         self.data = data
         self.session = session
+        self.redis = redis
 
     async def handle_user_deleted(self):
         user_id = self.data['user_id']
@@ -18,3 +19,10 @@ class TransactionConsumerService:
                 await self.session.delete(transaction)
             await self.session.commit()
             logger.info(f'Transactions for user {user_id} successfully deleted')
+            await self.cache_delete_handle()
+
+    async def cache_delete_handle(self):
+        user_id = self.data['user_id']
+        async for cache_key in self.redis.scan_iter(match=f'transactions:{user_id}:*'):
+            await self.redis.delete(cache_key)
+        logger.info(f'Cache for user {user_id} successfully deleted')
