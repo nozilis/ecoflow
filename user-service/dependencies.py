@@ -42,6 +42,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 
 def get_user_profile_service(
     db: AsyncSession = Depends(get_db),
-    request_user: int = Depends(get_current_user)
+    request_user: int = Depends(get_current_user),
+    redis: Redis = Depends(get_redis),
 ) -> UserProfileService:
-    return UserProfileService(db, request_user)
+    return UserProfileService(db, request_user, redis)
