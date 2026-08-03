@@ -15,7 +15,7 @@ async def get_user_profile(
 ) -> UserProfileResponse:
     try:
         user_profile = await user_profile_service.get_user_profile(user_id=user_id)
-        return UserProfileResponse.model_validate(user_profile)
+        return user_profile
     except UserProfileNotFound as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'{exc}')
 
