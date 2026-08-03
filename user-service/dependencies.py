@@ -4,14 +4,19 @@ from typing import AsyncGenerator
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from decouple import config
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, status, Depends, Request
 from services.user_profile_core import UserProfileService
+from redis.asyncio import Redis
 import logging
 
 logger = logging.getLogger(__name__)
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
+        yield session
+
+async def get_redis(request: Request):
+    async with Redis(connection_pool=request.app.state.redis_pool) as session:
         yield session
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
