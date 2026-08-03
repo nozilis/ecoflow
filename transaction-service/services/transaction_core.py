@@ -9,10 +9,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 class TransactionService:
-    def __init__(self, db, user_id, redis):
+    def __init__(self, db, user_id, redis, rabbitmq):
         self.db = db
         self.user_id = user_id
         self.redis = redis
+        self.rabbitmq = rabbitmq
 
     async def create_transaction(self, amount, transaction_type, category, description):
         create_transaction = Transaction(
@@ -29,7 +30,8 @@ class TransactionService:
 
         await publish_transaction_events(
                 'created', 
-                self.user_id, 
+                self.user_id,
+                self.rabbitmq, 
                 amount=amount, 
                 transaction_type=transaction_type, 
                 category=category, 
@@ -63,6 +65,7 @@ class TransactionService:
         await publish_transaction_events(
                 'deleted', 
                 self.user_id, 
+                self.rabbitmq,
                 amount=db_transaction.amount, 
                 transaction_type=db_transaction.transaction_type, 
                 category=db_transaction.category, 
@@ -94,6 +97,7 @@ class TransactionService:
         await publish_transaction_events(
             'updated', 
             self.user_id, 
+            self.rabbitmq,
             amount=transaction_update_dump.get('amount', db_transaction.amount), 
             transaction_type=transaction_update_dump.get('transaction_type', db_transaction.transaction_type), 
             category=transaction_update_dump.get('category', db_transaction.category), 
