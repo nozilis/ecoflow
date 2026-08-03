@@ -1,17 +1,16 @@
 import asyncio
 import aio_pika
-from decouple import config
 import json
 from database import async_session_maker
 from sqlalchemy.ext.asyncio import AsyncSession
 from services.analytics_consumer_core import AnalyticsConsumerService
 from redis.asyncio import Redis
 from redis_client import redis_pool
+from rabbitmq_client import get_rabbitmq_connection
+from aio_pika import RobustConnection
 
 async def run_consumer(handlers: dict[str, callable]):
-    connection = await aio_pika.connect_robust(
-        f"amqp://{config('RABBITMQ_DEFAULT_USER')}:{config('RABBITMQ_DEFAULT_PASS')}@rabbitmq/"
-    )
+    connection = await get_rabbitmq_connection()
 
     async with connection:
         channel = await connection.channel()
@@ -32,15 +31,16 @@ async def run_consumer(handlers: dict[str, callable]):
                     handler = handlers.get(message.routing_key)
                     if handler:
                         async with async_session_maker() as session: 
-                            await handler(data, session, redis_client)
+                            await handler(data, session, redis_client, connection)
 
 async def handle_transaction_created(
     data: dict,
     session: AsyncSession,
-    redis: Redis
+    redis: Redis,
+    rabbitmq: RobustConnection
 ):
     analytics_consumer_service = AnalyticsConsumerService(data, session, redis)
-    await analytics_consumer_service.handle_transaction_created()
+    await analytics_consumer_service.handle_transaction_created(rabbitmq)
 
 async def handle_transaction_updated(
     data: dict, 
