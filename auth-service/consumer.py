@@ -1,22 +1,20 @@
 import asyncio
 import aio_pika
-from decouple import config
 import json
 from database import async_session_maker
 from sqlalchemy.ext.asyncio import AsyncSession
 from services.auth_consumer_core import AuthConsumerService
+from rabbitmq_client import get_rabbitmq_connection
 
 async def run_consumer(handlers: dict[str, callable]):
-    connection = await aio_pika.connect_robust(
-        f"amqp://{config('RABBITMQ_DEFAULT_USER')}:{config('RABBITMQ_DEFAULT_PASS')}@rabbitmq/"
-    )
+    connection = await get_rabbitmq_connection()
 
     async with connection:
         channel = await connection.channel()
 
         exchange = await channel.declare_exchange("ecoflow_events", aio_pika.ExchangeType.TOPIC, durable=True)
 
-        queue = await channel.declare_queue('user_service.events', durable=True)
+        queue = await channel.declare_queue('auth_service.events', durable=True)
 
         for routing_key in handlers.keys():
             await queue.bind(exchange, routing_key=routing_key)

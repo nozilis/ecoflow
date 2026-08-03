@@ -2,14 +2,12 @@ import aio_pika
 import asyncio
 import json
 from database import async_session_maker
-from decouple import config
 from sqlalchemy.ext.asyncio import AsyncSession
 from services.notification_consumer_core import NotificationConsumerService
+from rabbitmq_client import get_rabbitmq_connection
 
 async def run_consumer(handlers: dict[str, callable]):
-    connection = await aio_pika.connect_robust(
-        f"amqp://{config('RABBITMQ_DEFAULT_USER')}:{config('RABBITMQ_DEFAULT_PASS')}@rabbitmq/"
-    )
+    connection = await get_rabbitmq_connection()
 
     async with connection:
         channel = await connection.channel()
