@@ -3,18 +3,25 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from enums import VisibilityChoice
 from publisher import publish_user_events
+from schemas import UserProfileResponse
+import json
 import logging
 
 logger = logging.getLogger(__name__)
 
 class UserProfileService:
-    def __init__(self, db, request_user):
+    def __init__(self, db, request_user, redis):
         self.db = db
         self.request_user = request_user
+        self.redis = redis
 
     async def get_user_profile(self, user_id):
-        if user_id is None:
-            user_id = self.request_user
+        user_id = user_id or self.request_user
+        cache_key = f'user_profile:{user_id}'
+        cache_data = await self.redis.get(cache_key)
+        if cache_data is not None:
+            data = json.loads(cache_data)
+            return data
         user_profile_is_exist = await self.db.execute(select(UserProfile).where(UserProfile.user_id == user_id))
         db_user_profile = user_profile_is_exist.scalar_one_or_none()
         if db_user_profile is None:
@@ -24,7 +31,11 @@ class UserProfileService:
             if db_user_profile.visibility_choice == VisibilityChoice.PRIVATE and self.request_user != user_id:
                 logger.warning(f'User profile for user {user_id} visibility choice is private and request user is not owner of this account')
                 raise UserProfileNotFound('User not found')
-            return db_user_profile
+            validated_data = UserProfileResponse.model_validate(db_user_profile).model_dump()
+            if db_user_profile.visibility_choice == VisibilityChoice.PUBLIC:
+                data_to_cache = json.dumps(validated_data)
+                await self.redis.set(cache_key, data_to_cache, 300)
+            return validated_data
 
     async def update_user_profile(self, user_profile_update_request):
         user_profile_is_exist = await self.db.execute(select(UserProfile).where(UserProfile.user_id == self.request_user))
@@ -50,6 +61,7 @@ class UserProfileService:
             setattr(db_user_profile, item, value)
         try:
             await self.db.commit()
+            await self.cache_delete_handle(self.request_user)
             logger.info(f'User profile for user {self.request_user} successfully updated')
             if 'username' in user_profile_update_dump or 'email' in user_profile_update_dump:
                 await publish_user_events('updated', self.request_user, **{k: v for k, v in user_profile_update_dump_items if k in {'username', 'email'}})
@@ -73,7 +85,13 @@ class UserProfileService:
         await self.db.delete(db_user_profile)
         await self.db.commit()
         logger.info(f'User profile for user {self.request_user} successfully deleted')
+        await self.cache_delete_handle(self.request_user)
         await publish_user_events('deleted', self.request_user)
+
+    async def cache_delete_handle(self, user_id):
+        cache_key = f'user_profile:{user_id}'
+        await self.redis.delete(cache_key)
+        logger.info(f'Cache with key {cache_key} successfully deleted')
 
 class UserProfileNotFound(Exception):
     pass
