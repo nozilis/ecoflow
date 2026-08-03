@@ -7,6 +7,7 @@ from decouple import config
 from fastapi import HTTPException, status, Depends, Request
 from services.analytics_core import AnalyticsService
 from redis.asyncio import Redis
+from aio_pika import RobustConnection
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,9 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 async def get_redis(request: Request):
     async with Redis(connection_pool=request.app.state.redis_pool) as session:
         yield session
+
+async def get_rabbitmq(request: Request):
+    yield request.app.state.rabbitmq_connection
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
@@ -43,6 +47,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 def get_analytics_service(
     db: AsyncSession = Depends(get_db),
     user_id: int = Depends(get_current_user),
-    redis: Redis = Depends(get_redis)
+    redis: Redis = Depends(get_redis),
+    rabbitmq: RobustConnection = Depends(get_rabbitmq)
 ) -> AnalyticsService:
-    return AnalyticsService(db, user_id, redis)
+    return AnalyticsService(db, user_id, redis, rabbitmq)

@@ -3,12 +3,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import async_session_maker
 from fastapi.security import OAuth2PasswordBearer 
 from jose import jwt, JWTError
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, status, Depends, Request
 from decouple import config
 from sqlalchemy import select
 from models import User
 from jwt_token import ALGORITHM
 from services.auth_core import AuthService
+from aio_pika import RobustConnection
 import logging
 
 logger = logging.getLogger(__name__)
@@ -16,6 +17,9 @@ logger = logging.getLogger(__name__)
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with async_session_maker() as session:
         yield session
+
+async def get_rabbitmq(request: Request):
+    yield request.app.state.rabbitmq_connection
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
@@ -42,6 +46,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     return db_user
 
 def get_auth_service(
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    rabbitmq: RobustConnection = Depends(get_rabbitmq)
 ) -> AuthService:
-    return AuthService(db)
+    return AuthService(db, rabbitmq)
