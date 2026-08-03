@@ -10,8 +10,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 class AuthService:
-    def __init__(self, db):
+    def __init__(self, db, rabbitmq):
         self.db = db
+        self.rabbitmq = rabbitmq
 
     async def register_user(self, user):
         hashed_password = bcrypt.hash(user.password)
@@ -25,7 +26,7 @@ class AuthService:
             try:
                 self.db.add(create_user)
                 await self.db.commit()
-                await publish_user_events('created', create_user.id, username=user.username, email=user.email, created_at=create_user.created_at)
+                await publish_user_events('created', create_user.id, self.rabbitmq, username=user.username, email=user.email, created_at=create_user.created_at)
                 logger.info('User successfully registered')
                 return UserResponse.model_validate(create_user)
             except IntegrityError as e:
