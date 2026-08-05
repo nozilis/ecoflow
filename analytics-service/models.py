@@ -22,3 +22,13 @@ class UserBudget(Base):
 
     user_id: Mapped[int] = mapped_column(primary_key=True)
     budget_limit: Mapped[int] = mapped_column(Integer, nullable=True)
+
+class BudgetExceedNotification(Base):
+    __tablename__ = 'budget_exceed_notification'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey('user_budget.user_id', ondelete='CASCADE'))
+    year: Mapped[int] = mapped_column(Integer)
+    month: Mapped[int] = mapped_column(Integer)
+
+    __table_args__ = (UniqueConstraint('user_id', 'year', 'month', name='month_budget_exceed_notification'), )
