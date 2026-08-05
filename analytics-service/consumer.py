@@ -39,39 +39,43 @@ async def handle_transaction_created(
     redis: Redis,
     rabbitmq: RobustConnection
 ):
-    analytics_consumer_service = AnalyticsConsumerService(data, session, redis)
-    await analytics_consumer_service.handle_transaction_created(rabbitmq)
+    analytics_consumer_service = AnalyticsConsumerService(data, session, redis, rabbitmq)
+    await analytics_consumer_service.handle_transaction_created()
 
 async def handle_transaction_updated(
     data: dict, 
     session: AsyncSession,
-    redis: Redis
+    redis: Redis,
+    rabbitmq: RobustConnection
 ):
-    analytics_consumer_service = AnalyticsConsumerService(data, session, redis)
+    analytics_consumer_service = AnalyticsConsumerService(data, session, redis, rabbitmq)
     await analytics_consumer_service.handle_transaction_updated()
 
 async def handle_transaction_deleted(
     data: dict, 
     session: AsyncSession,
-    redis: Redis
+    redis: Redis,
+    rabbitmq: RobustConnection
 ):
-    analytics_consumer_service = AnalyticsConsumerService(data, session, redis)
+    analytics_consumer_service = AnalyticsConsumerService(data, session, redis, rabbitmq)
     await analytics_consumer_service.handle_transaction_deleted()
 
 async def handle_budget_limit_updated(
     data: dict, 
     session: AsyncSession,
-    redis: Redis
+    redis: Redis,
+    rabbitmq: RobustConnection
 ):
-    analytics_consumer_service = AnalyticsConsumerService(data, session, redis)
+    analytics_consumer_service = AnalyticsConsumerService(data, session, redis, rabbitmq)
     await analytics_consumer_service.handle_budget_limit_updated()
 
 async def handle_user_deleted(
     data: dict, 
     session: AsyncSession,
-    redis: Redis
+    redis: Redis,
+    rabbitmq: RobustConnection
 ):
-    analytics_consumer_service = AnalyticsConsumerService(data, session, redis)
+    analytics_consumer_service = AnalyticsConsumerService(data, session, redis, rabbitmq)
     await analytics_consumer_service.handle_user_deleted()
 
 if __name__ == "__main__":
