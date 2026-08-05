@@ -1,4 +1,4 @@
-from models import MonthlyStats, UserBudget
+from models import MonthlyStats, UserBudget, BudgetExceedNotification
 from publisher import publish_analytics_events
 from sqlalchemy import select, func
 from datetime import datetime
@@ -7,12 +7,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 class AnalyticsConsumerService:
-    def __init__(self, data, session, redis):
+    def __init__(self, data, session, redis, rabbitmq):
         self.data = data
         self.session = session
         self.redis = redis
+        self.rabbitmq = rabbitmq
 
-    async def handle_transaction_created(self, rabbitmq):
+    async def handle_transaction_created(self):
         date = datetime.fromisoformat(self.data['created_at'])
         year, month = date.year, date.month
         user_id, category, transaction_type, amount = self.data['user_id'], self.data['category'], self.data['transaction_type'], self.data['amount']
@@ -25,18 +26,7 @@ class AnalyticsConsumerService:
         else:
             db_monthly_stats.total_amount += amount
             logger.info(f'Total amount for user {user_id} successfully increased')
-        monthly_stats_total = await self.session.execute(select(func.sum(MonthlyStats.total_amount).label('monthly_stats_total')).where(MonthlyStats.user_id == user_id, MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.transaction_type == 'Expense'))
-        user_budget_limit = await self.session.execute(select(UserBudget).where(UserBudget.user_id == user_id))
-        db_monthly_stats_total = monthly_stats_total.scalar_one_or_none()
-        db_user_budget_limit = user_budget_limit.scalar_one_or_none()
-        if db_monthly_stats_total is None:
-            logger.warning(f'User {user_id} transactions not found')
-        if db_user_budget_limit is None:
-            logger.warning(f'User {user_id} budget limit not found')
-        if db_monthly_stats_total and db_user_budget_limit:
-            if db_monthly_stats_total > db_user_budget_limit:
-                await publish_analytics_events('exceed', user_id, rabbitmq, monthly_stats_total=db_monthly_stats_total, user_budget_limit=db_user_budget_limit)
-                logger.info(f'User {user_id} budget exceed the limit event successfully published')
+        await self.budget_exceed_check()
         await self.session.commit()
         await self.cache_delete_handle()
 
@@ -58,6 +48,7 @@ class AnalyticsConsumerService:
             db_monthly_stats.total_amount = db_monthly_stats.total_amount - old_impact + new_impact
             await self.session.commit()
             logger.info(f'MonthlyStats for user {user_id} successfully updated')
+            await self.budget_exceed_check()
             await self.cache_delete_handle()
         else:
             logger.warning(f'MonthlyStats for user {user_id} not found')
@@ -75,6 +66,7 @@ class AnalyticsConsumerService:
                 db_monthly_stats.total_amount += amount
             await self.session.commit()
             logger.info(f'MonthlyStats for user {user_id} successfully updated')
+            await self.budget_exceed_check()
             await self.cache_delete_handle()
         else:
             logger.warning(f'MonthlyStats for user {user_id} not found')
@@ -126,3 +118,35 @@ class AnalyticsConsumerService:
             if int(start) <= transaction_point <= int(end):
                 await self.redis.delete(range_cache_key)
                 logger.info(f'Cache with key {range_cache_key} successfully deleted')
+
+    async def budget_exceed_check(self):
+        date = datetime.fromisoformat(self.data['created_at'])
+        year, month = date.year, date.month
+        user_id = self.data['user_id']
+        monthly_stats_total = await self.session.execute(select(func.sum(MonthlyStats.total_amount).label('monthly_stats_total')).where(MonthlyStats.user_id == user_id, MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.transaction_type == 'Expense'))
+        user_budget_limit = await self.session.execute(select(UserBudget).where(UserBudget.user_id == user_id))
+        db_monthly_stats_total = monthly_stats_total.scalar_one_or_none()
+        db_user_budget_limit = user_budget_limit.scalar_one_or_none()
+        if db_monthly_stats_total is None:
+            logger.warning(f'User {user_id} transactions not found')
+        if db_user_budget_limit is None:
+            logger.warning(f'User {user_id} budget limit not found')
+        if (db_monthly_stats_total and db_user_budget_limit) and (month == datetime.now().month and year == datetime.now().year):
+            budget_exceed_notification_is_exist = await self.session.execute(select(BudgetExceedNotification).where(BudgetExceedNotification.user_id == user_id))
+            db_budget_exceed_notification = budget_exceed_notification_is_exist.scalar_one_or_none()
+            if db_monthly_stats_total > db_user_budget_limit:
+                if db_budget_exceed_notification is None:
+                    create_budget_exceed_notification = BudgetExceedNotification(
+                        user_id = user_id,
+                        month = month,
+                        year = year
+                    )
+                    self.session.add(create_budget_exceed_notification)
+                    await self.session.commit()
+                    logger.info(f'Budget exceed notification for user {user_id} successfully created')
+                    await publish_analytics_events('exceed', user_id, self.rabbitmq, monthly_stats_total=db_monthly_stats_total, user_budget_limit=db_user_budget_limit)
+            else:
+                if db_budget_exceed_notification is not None:
+                    await self.session.delete(db_budget_exceed_notification)
+                    await self.session.commit()
+                    logger.info(f'User {user_id} budget is not exceeded, notification for {month}-{year} successfully deleted')   
