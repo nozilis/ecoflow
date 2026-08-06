@@ -1,5 +1,5 @@
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import String, Boolean, ForeignKey, DateTime, func
+from sqlalchemy import String, Boolean, ForeignKey, DateTime, Integer, func
 from datetime import datetime
 
 class Base(DeclarativeBase):
@@ -23,7 +23,7 @@ class NotificationLog(Base):
     __tablename__ = 'notifications_logs'
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey('user_contacts.user_id'))
+    user_id: Mapped[int] = mapped_column(Integer)
     notification_topic: Mapped[str] = mapped_column(String(200))
     notification_message: Mapped[str] = mapped_column(String(2000))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
