@@ -8,6 +8,7 @@ from rabbitmq_client import get_rabbitmq_connection
 from redis.asyncio import Redis
 from redis_client import redis_pool
 import logging
+import signal
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,15 @@ MAX_RETRIES = 5
 
 async def run_consumer(handlers: dict[str, callable]):
     connection = await get_rabbitmq_connection()
+
+    stop_event = asyncio.Event()
+
+    def handle_shutdown():
+        stop_event.set()
+
+    loop = asyncio.get_running_loop()
+    loop.add_signal_handler(signal.SIGTERM, handle_shutdown)
+    loop.add_signal_handler(signal.SIGINT, handle_shutdown)
 
     async with connection:
         channel = await connection.channel()
@@ -49,6 +59,8 @@ async def run_consumer(handlers: dict[str, callable]):
 
         async with queue.iterator() as queue_iter:
             async for message in queue_iter:
+                if stop_event.is_set():
+                    break
                 async with message.process():
                     data = json.loads(message.body)
                     handler = handlers.get(message.routing_key)
