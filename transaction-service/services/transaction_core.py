@@ -84,10 +84,10 @@ class TransactionService:
         final_type = transaction_update_request.transaction_type if transaction_update_request.transaction_type is not None else db_transaction.transaction_type
         final_category = transaction_update_dump.get('category', db_transaction.category)
         if final_type == TransactionType.EXPENSE:
-            if final_category not in [category for category in ExpenseCategory]:
+            if not isinstance(final_category, ExpenseCategory):
                 raise InvalidCategory('Invalid transaction category')
         else:
-            if final_category not in [category for category in IncomeCategory]:
+            if not isinstance(final_category, IncomeCategory):
                 raise InvalidCategory('Invalid transaction category')
         transaction_update_dump_items = transaction_update_dump.items()
         for item, value in transaction_update_dump_items:
