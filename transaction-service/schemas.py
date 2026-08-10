@@ -13,10 +13,10 @@ class TransactionCreate(BaseModel):
     def check_category_type(self) -> Self:
         if self.category:
             if self.transaction_type == TransactionType.EXPENSE:
-                if self.category not in ExpenseCategory:
+                if not isinstance(self.category, ExpenseCategory):
                     raise ValueError('Invalid transaction category')
             else:
-                if self.category not in IncomeCategory:
+                if not isinstance(self.category, IncomeCategory):
                     raise ValueError('Invalid transaction category')
         else:
             if self.transaction_type == TransactionType.EXPENSE:
