@@ -7,42 +7,6 @@ from types import SimpleNamespace
 from schemas import TransactionUpdate
 
 @pytest.fixture
-def mock_db():
-    db = AsyncMock()
-    db.add = MagicMock()
-    db.refresh = AsyncMock(side_effect=fake_refresh)
-    return db
-
-@pytest.fixture
-def mock_redis():
-    redis = AsyncMock()
-    redis.scan_iter = fake_scan_iter
-    return redis
-
-@pytest.fixture
-def mock_rabbitmq():  
-    return AsyncMock()
-
-@pytest.fixture
-def mock_result(fake_transaction):
-    result = MagicMock()
-    result.scalar_one_or_none.return_value = fake_transaction
-    return result
-
-@pytest.fixture
-def mock_transaction_not_found():
-    result = MagicMock()
-    result.scalar_one_or_none.return_value = None
-    return result
-
-async def fake_scan_iter(match=None):
-    yield 'transactions:1:1:20'
-
-async def fake_refresh(obj):
-    obj.id = 1
-    obj.created_at = datetime(2026, 8, 4, 12, 0, 0)
-
-@pytest.fixture
 def fake_transaction():
     return SimpleNamespace(
         id=1,
@@ -64,7 +28,7 @@ def fake_invalid_transaction_update_request():
 
 @pytest.fixture
 def get_transaction_service(mock_db, mock_redis, mock_rabbitmq):
-    return TransactionService(db=mock_db,user_id=1,redis=mock_redis,rabbitmq=mock_rabbitmq)
+    return TransactionService(db=mock_db, user_id=1, redis=mock_redis, rabbitmq=mock_rabbitmq)
 
 @patch('services.transaction_core.publish_transaction_events', new_callable=AsyncMock)
 async def test_create_transaction(mock_publish, get_transaction_service, mock_db, mock_redis, mock_rabbitmq):
@@ -89,8 +53,8 @@ async def test_create_transaction(mock_publish, get_transaction_service, mock_db
     assert result
 
 @patch('services.transaction_core.publish_transaction_events', new_callable=AsyncMock)
-async def test_delete_transaction(mock_publish, get_transaction_service, mock_db, mock_redis, mock_rabbitmq, mock_result):
-    mock_db.execute = AsyncMock(return_value=mock_result)
+async def test_delete_transaction(mock_publish, get_transaction_service, mock_db, mock_redis, mock_rabbitmq, make_mock_result, fake_transaction):
+    mock_db.execute = AsyncMock(return_value=make_mock_result(fake_transaction))
     result = await get_transaction_service.delete_transaction(1)
     mock_db.delete.assert_called_once()
     mock_db.commit.assert_called_once()
@@ -106,8 +70,8 @@ async def test_delete_transaction(mock_publish, get_transaction_service, mock_db
     mock_redis.delete.assert_called_once()
 
 @patch('services.transaction_core.publish_transaction_events', new_callable=AsyncMock)
-async def test_valid_update_transaction(mock_publish, get_transaction_service, mock_db, mock_redis, mock_rabbitmq, mock_result, fake_transaction_update_request, fake_transaction):
-    mock_db.execute = AsyncMock(return_value=mock_result)
+async def test_valid_update_transaction(mock_publish, get_transaction_service, mock_db, mock_redis, mock_rabbitmq, make_mock_result, fake_transaction_update_request, fake_transaction):
+    mock_db.execute = AsyncMock(return_value=make_mock_result(fake_transaction))
     mock_recent_amount=fake_transaction.amount
     mock_recent_type=fake_transaction.transaction_type
     result = await get_transaction_service.update_transaction(
@@ -129,17 +93,17 @@ async def test_valid_update_transaction(mock_publish, get_transaction_service, m
     mock_redis.delete.assert_called_once()
     assert result
 
-async def test_invalid_update_transaction(get_transaction_service, mock_db, mock_transaction_not_found, fake_transaction_update_request):
+async def test_invalid_update_transaction(get_transaction_service, mock_db, make_mock_result, fake_transaction_update_request):
     with pytest.raises(TransactionNotFound):
-        mock_db.execute = AsyncMock(return_value=mock_transaction_not_found)
+        mock_db.execute = AsyncMock(return_value=make_mock_result(None))
         result = await get_transaction_service.update_transaction(
             10,
             fake_transaction_update_request
         )
 
-async def test_invalid_category_transacton_update(get_transaction_service, mock_db, mock_result, fake_invalid_transaction_update_request, fake_transaction):
+async def test_invalid_category_transacton_update(get_transaction_service, mock_db, make_mock_result, fake_invalid_transaction_update_request, fake_transaction):
     with pytest.raises(InvalidCategory):
-        mock_db.execute = AsyncMock(return_value=mock_result)
+        mock_db.execute = AsyncMock(return_value=make_mock_result(fake_transaction))
         result = await get_transaction_service.update_transaction(
             1,
             fake_invalid_transaction_update_request
