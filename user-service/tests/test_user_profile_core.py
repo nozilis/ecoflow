@@ -1,24 +1,10 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, call
+from unittest.mock import AsyncMock, patch, call
 from services.user_profile_core import UserProfileService, UserProfileNotFound, UsernameConflict, EmailConflict
 from models import UserProfile
 from enums import VisibilityChoice
 from schemas import UserProfileUpdate
 import json
-
-@pytest.fixture
-def mock_db():
-    return AsyncMock()
-
-@pytest.fixture
-def mock_redis():
-    redis = AsyncMock()
-    redis.get.return_value = None
-    return redis
-
-@pytest.fixture
-def mock_rabbitmq():
-    return AsyncMock()
 
 @pytest.fixture
 def get_user_profile_service(mock_db, mock_redis, mock_rabbitmq):
@@ -107,42 +93,6 @@ def fake_email_taken_user_profile():
     )
 
 @pytest.fixture
-def mock_result(fake_user_profile):
-    result = MagicMock()
-    result.scalar_one_or_none.return_value = fake_user_profile
-    return result
-
-@pytest.fixture
-def mock_private_result(fake_private_user_profile):
-    result = MagicMock()
-    result.scalar_one_or_none.return_value = fake_private_user_profile
-    return result
-
-@pytest.fixture
-def mock_none_result():
-    result = MagicMock()
-    result.scalar_one_or_none.return_value = None
-    return result
-
-@pytest.fixture
-def mock_owner_result(fake_owner_user_profile):
-    result = MagicMock()
-    result.scalar_one_or_none.return_value = fake_owner_user_profile
-    return result
-
-@pytest.fixture
-def mock_username_taken_result(fake_username_taken_user_profile):
-    result = MagicMock()
-    result.scalar_one_or_none.return_value = fake_username_taken_user_profile
-    return result
-
-@pytest.fixture
-def mock_email_taken_result(fake_email_taken_user_profile):
-    result = MagicMock()
-    result.scalar_one_or_none.return_value = fake_email_taken_user_profile
-    return result
-
-@pytest.fixture
 def fake_user_profile_update_request():
     return UserProfileUpdate(
         username='update_test_1',
@@ -155,8 +105,8 @@ def fake_user_profile_update_request():
 def fake_email_user_profile_update_request():
     return UserProfileUpdate(username='update_test_2', email='update_test_2')
 
-async def test_get_user_profile(get_user_profile_service, mock_db, mock_redis, mock_result, fake_user_profile_id):
-    mock_db.execute = AsyncMock(return_value=mock_result)
+async def test_get_user_profile(get_user_profile_service, mock_db, mock_redis, make_mock_result, fake_user_profile, fake_user_profile_id):
+    mock_db.execute = AsyncMock(return_value=make_mock_result(fake_user_profile))
     result = await get_user_profile_service.get_user_profile(fake_user_profile_id)
     mock_redis.get.assert_called_once()
     mock_redis.set.assert_called_once_with(
@@ -175,24 +125,23 @@ async def test_get_user_profile(get_user_profile_service, mock_db, mock_redis, m
     )
     assert result
 
-
-async def test_get_private_user_profile(get_user_profile_service, mock_db, mock_redis, mock_private_result, fake_private_user_profile_id):
+async def test_get_private_user_profile(get_user_profile_service, mock_db, mock_redis, make_mock_result, fake_private_user_profile, fake_private_user_profile_id):
     with pytest.raises(UserProfileNotFound):
-        mock_db.execute = AsyncMock(return_value=mock_private_result)
+        mock_db.execute = AsyncMock(return_value=make_mock_result(fake_private_user_profile))
         result = await get_user_profile_service.get_user_profile(fake_private_user_profile_id)
     mock_redis.get.assert_called_once()
     mock_redis.set.assert_not_called()
 
-async def test_user_profile_not_found(get_user_profile_service, mock_db, mock_redis, mock_none_result, fake_not_found_user_profile_id):
+async def test_user_profile_not_found(get_user_profile_service, mock_db, mock_redis, make_mock_result, fake_not_found_user_profile_id):
     with pytest.raises(UserProfileNotFound):
-        mock_db.execute = AsyncMock(return_value=mock_none_result)
+        mock_db.execute = AsyncMock(return_value=make_mock_result(None))
         result = await get_user_profile_service.get_user_profile(fake_not_found_user_profile_id)
     mock_redis.get.assert_called_once()
     mock_redis.set.assert_not_called()
 
 @patch('services.user_profile_core.publish_user_events', new_callable=AsyncMock)
-async def test_update_user_profile(mock_publish, get_user_profile_service, mock_db, mock_redis, mock_rabbitmq, mock_owner_result, mock_none_result, fake_user_profile_update_request):
-    mock_db.execute = AsyncMock(side_effect=[mock_owner_result, mock_none_result, mock_none_result])
+async def test_update_user_profile(mock_publish, get_user_profile_service, mock_db, mock_redis, mock_rabbitmq, make_mock_result, fake_owner_user_profile, fake_user_profile_update_request):
+    mock_db.execute = AsyncMock(side_effect=[make_mock_result(fake_owner_user_profile), make_mock_result(None), make_mock_result(None)])
     result = await get_user_profile_service.update_user_profile(fake_user_profile_update_request)
     mock_redis.delete.assert_called_once_with('user_profile:1')
     mock_publish.assert_has_calls([
@@ -202,21 +151,21 @@ async def test_update_user_profile(mock_publish, get_user_profile_service, mock_
     ])
     assert result
 
-async def test_username_conflict_update_user_profile(get_user_profile_service, mock_db, mock_redis, mock_owner_result, mock_username_taken_result, fake_user_profile_update_request):
+async def test_username_conflict_update_user_profile(get_user_profile_service, mock_db, mock_redis, make_mock_result, fake_owner_user_profile, fake_username_taken_user_profile, fake_user_profile_update_request):
     with pytest.raises(UsernameConflict):
-        mock_db.execute = AsyncMock(side_effect=[mock_owner_result, mock_username_taken_result])
+        mock_db.execute = AsyncMock(side_effect=[make_mock_result(fake_owner_user_profile), make_mock_result(fake_username_taken_user_profile)])
         result = await get_user_profile_service.update_user_profile(fake_user_profile_update_request)
     mock_redis.delete.assert_not_called()
 
-async def test_email_conflict_update_user_profile(get_user_profile_service, mock_db, mock_redis, mock_owner_result, mock_none_result, mock_email_taken_result, fake_email_user_profile_update_request):
+async def test_email_conflict_update_user_profile(get_user_profile_service, mock_db, mock_redis, make_mock_result, fake_owner_user_profile, fake_email_taken_user_profile, fake_email_user_profile_update_request):
     with pytest.raises(EmailConflict):
-        mock_db.execute = AsyncMock(side_effect=[mock_owner_result, mock_none_result, mock_email_taken_result])
+        mock_db.execute = AsyncMock(side_effect=[make_mock_result(fake_owner_user_profile), make_mock_result(None), make_mock_result(fake_email_taken_user_profile)])
         result = await get_user_profile_service.update_user_profile(fake_email_user_profile_update_request)
     mock_redis.delete.assert_not_called()
 
 @patch('services.user_profile_core.publish_user_events', new_callable=AsyncMock)
-async def test_delete_user(mock_publish, get_user_profile_service, mock_db, mock_redis, mock_rabbitmq, mock_owner_result):
-    mock_db.execute = AsyncMock(return_value=mock_owner_result)
+async def test_delete_user(mock_publish, get_user_profile_service, mock_db, mock_redis, mock_rabbitmq, make_mock_result, fake_owner_user_profile):
+    mock_db.execute = AsyncMock(return_value=make_mock_result(fake_owner_user_profile))
     result = await get_user_profile_service.delete_user_profile()
     mock_redis.delete.assert_called_once_with('user_profile:1')
     mock_publish.assert_called_once_with(
