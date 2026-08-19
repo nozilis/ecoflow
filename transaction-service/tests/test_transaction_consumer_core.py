@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 from services.transaction_consumer_core import TransactionConsumerService
 from models import Transaction
 from enums import TransactionType, IncomeCategory, ExpenseCategory

@@ -1,7 +1,7 @@
 import pytest
 from services.transaction_core import TransactionService, TransactionNotFound, InvalidCategory
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 from enums import ExpenseCategory, IncomeCategory, TransactionType
 from types import SimpleNamespace
 from schemas import TransactionUpdate
