@@ -3,7 +3,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 @pytest.fixture
 def mock_db():
-    return AsyncMock()
+    result = AsyncMock()
+    result.add = MagicMock()
+    return result
 
 @pytest.fixture
 def mock_redis():
