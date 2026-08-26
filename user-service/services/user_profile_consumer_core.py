@@ -11,7 +11,7 @@ class UserProfileConsumerService:
 
     async def handle_user_created(self):
         user_id, username, email = self.data['id'], self.data['username'], self.data['email']
-        user_profile_is_exist = await self.session.execute(select(UserProfile).where(UserProfile.username == username))
+        user_profile_is_exist = await self.session.execute(select(UserProfile).where(UserProfile.user_id == user_id))
         db_user_profile = user_profile_is_exist.scalar_one_or_none()
         if db_user_profile is None:
             create_user_profile = UserProfile(user_id = user_id, username = username, email = email)
