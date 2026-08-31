@@ -10,7 +10,7 @@ class NotificationConsumerService:
         self.session = session
 
     async def handle_user_created(self):
-        user_id, email, username = self.data['id'], self.data['username'], self.data['email']
+        user_id, email, username = self.data['user_id'], self.data['username'], self.data['email']
         user_contact_is_exist = await self.session.execute(select(UserContact).where(UserContact.username == username))
         db_user_contact = user_contact_is_exist.scalar_one_or_none()
         if db_user_contact is None:
