@@ -10,7 +10,7 @@ class NotificationConsumerService:
         self.session = session
 
     async def handle_user_created(self):
-        user_id, email, username = self.data['user_id'], self.data['username'], self.data['email']
+        user_id, email, username = self.data['user_id'], self.data['email'], self.data['username']
         user_contact_is_exist = await self.session.execute(select(UserContact).where(UserContact.user_id == user_id))
         db_user_contact = user_contact_is_exist.scalar_one_or_none()
         if db_user_contact is None:
@@ -24,7 +24,7 @@ class NotificationConsumerService:
             logger.warning(f"User {user_id} already exists in UserContact, skipping")
 
     async def handle_user_updated(self):
-        user_id, username, email = self.data['user_id'], self.data.get('username'), self.data.get('email')
+        user_id, email, username = self.data['user_id'], self.data.get('email'), self.data.get('username')
         user_contact_is_exist = await self.session.execute(select(UserContact).where(UserContact.user_id == user_id))
         db_user_contact = user_contact_is_exist.scalar_one_or_none()
         if db_user_contact is None:
