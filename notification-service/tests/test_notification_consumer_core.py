@@ -18,7 +18,7 @@ def fake_notification_settings():
 async def test_user_created(get_notification_consumer_service, mock_db, make_mock_result):
     mock_db.execute = AsyncMock(return_value=make_mock_result(None))
     result = await get_notification_consumer_service.handle_user_created()
-    mock_db.add.call_count == 2
+    assert mock_db.add.call_count == 2
     created_user_contact = mock_db.add.call_args_list[0].args[0]
     assert created_user_contact.user_id == 1
     assert created_user_contact.email == 'test@example'
