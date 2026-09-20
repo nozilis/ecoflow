@@ -26,7 +26,8 @@ class AuthService:
             try:
                 self.db.add(create_user)
                 await self.db.commit()
-                await publish_user_events('created', create_user.id, self.rabbitmq, username=user.username, email=user.email, created_at=create_user.created_at)
+                await self.db.refresh(create_user)
+                await publish_user_events('created', create_user.id, self.rabbitmq, username=user.username, email=user.email, registered_at=create_user.registered_at)
                 logger.info('User successfully registered')
                 return UserResponse.model_validate(create_user)
             except IntegrityError as e:
