@@ -27,7 +27,6 @@ class TransactionService:
         await self.db.commit()
         await self.db.refresh(create_transaction)
         logger.info(f'Transaction {create_transaction.id} by user {self.user_id} successfully created')
-
         await publish_transaction_events(
                 'created', 
                 self.user_id,
