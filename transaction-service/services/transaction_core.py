@@ -78,9 +78,9 @@ class TransactionService:
         if db_transaction is None:
             logger.warning(f'Transaction {transaction_id} not found')
             raise TransactionNotFound('Transaction not found')
-        recent_amount, recent_type = db_transaction.amount, db_transaction.transaction_type
+        recent_amount, recent_type, recent_category = db_transaction.amount, db_transaction.transaction_type, db_transaction.category
         transaction_update_dump = transaction_update_request.model_dump(exclude_unset=True)
-        final_type = transaction_update_request.transaction_type if transaction_update_request.transaction_type is not None else db_transaction.transaction_type
+        final_type = transaction_update_dump.get('transaction_type', db_transaction.transaction_type)
         final_category = transaction_update_dump.get('category', db_transaction.category)
         if final_type == TransactionType.EXPENSE:
             if not isinstance(final_category, ExpenseCategory):
@@ -102,7 +102,9 @@ class TransactionService:
             category=transaction_update_dump.get('category', db_transaction.category), 
             created_at=db_transaction.created_at, 
             recent_amount=recent_amount, 
-            recent_type=recent_type)
+            recent_type=recent_type,
+            recent_category=recent_category
+            )
         await self.cache_delete_handle()
         return db_transaction   
 
