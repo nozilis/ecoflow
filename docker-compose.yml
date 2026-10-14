@@ -13,6 +13,8 @@ services:
         condition: service_healthy
       postgres_auth:
         condition: service_started
+      redis:
+        condition: service_started
   transaction_service:
     build: ./transaction-service
     env_file: 
@@ -26,6 +28,8 @@ services:
       rabbitmq:
         condition: service_healthy
       postgres_transaction:
+        condition: service_started
+      redis:
         condition: service_started
   analytics_service:
     build: ./analytics-service
@@ -41,6 +45,8 @@ services:
         condition: service_healthy
       postgres_analytics:
         condition: service_started
+      redis:
+        condition: service_started
   user_service:
     build: ./user-service
     env_file: 
@@ -54,6 +60,8 @@ services:
       rabbitmq:
         condition: service_healthy
       postgres_user:
+        condition: service_started
+      redis:
         condition: service_started
   gateway_service:
     build: ./gateway-service
@@ -79,6 +87,8 @@ services:
         condition: service_healthy
       postgres_analytics:
         condition: service_started
+      redis:
+        condition: service_started
     command: python consumer.py
   auth_service_consumer:
     build: ./auth-service
@@ -91,6 +101,8 @@ services:
       rabbitmq:
         condition: service_healthy
       postgres_auth:
+        condition: service_started
+      redis:
         condition: service_started
     command: python consumer.py
   notification_service_consumer:
@@ -117,6 +129,8 @@ services:
       rabbitmq:
         condition: service_healthy
       postgres_user:
+        condition: service_started
+      redis:
         condition: service_started
     command: python consumer.py
   postgres_auth:
@@ -169,6 +183,14 @@ services:
       - postgres_notification_data:/var/lib/postgresql/data
     env_file: 
       - ./notification-service/.env
+  redis:
+    image: redis:7-alpine
+    container_name: ecoflow_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
   rabbitmq:
     image: rabbitmq:3-management
     container_name: ecoflow_rabbitmq
@@ -193,4 +215,5 @@ volumes:
   postgres_analytics_data:
   postgres_user_data:
   postgres_notification_data:
+  redis_data:
   rabbitmq:
