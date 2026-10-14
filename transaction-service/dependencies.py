@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import AsyncGenerator
 from database import async_session_maker
-from services import TransactionService
+from services.transaction_core import TransactionService
 from redis.asyncio import Redis
 from aio_pika import RobustConnection
 import logging
