@@ -47,7 +47,7 @@ class TransactionService:
             return data
         transactions = await self.db.execute(select(Transaction).where(Transaction.user_id == self.user_id).limit(page_size).offset((page-1)*page_size))
         get_transactions = transactions.scalars().all()
-        db_transactions = [TransactionResponse.model_validate(item).model_dump() for item in get_transactions]
+        db_transactions = [TransactionResponse.model_validate(item).model_dump(mode='json') for item in get_transactions]
         data_to_cache = json.dumps(db_transactions)
         await self.redis.set(cache_key, data_to_cache, 300)
         return db_transactions
