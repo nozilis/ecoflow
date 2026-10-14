@@ -50,4 +50,4 @@ def get_analytics_service(
     redis: Redis = Depends(get_redis),
     rabbitmq: RobustConnection = Depends(get_rabbitmq)
 ) -> AnalyticsService:
-    return AnalyticsService(db, user_id, redis, rabbitmq)
+    return AnalyticsService(db, user_id, redis)
