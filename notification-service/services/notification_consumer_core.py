@@ -17,6 +17,7 @@ class NotificationConsumerService:
             create_user_contact = UserContact(user_id = user_id, email = email, username = username)
             create_notification_settings = NotificationSettings(user_id = user_id)
             self.session.add(create_user_contact)
+            await self.session.flush() 
             self.session.add(create_notification_settings)
             await self.session.commit()
             logger.info(f"User {user_id} successfully created")
