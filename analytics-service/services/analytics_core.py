@@ -54,7 +54,7 @@ class AnalyticsService:
         if cached_data is not None:
             data = json.loads(cached_data)
             return data
-        range_stats = await self.db.execute(select(MonthlyStats.category, func.sum(MonthlyStats.total_amount).label('total_range_amount')).where(MonthlyStats.user_id == self.user_id, (start, end)).group_by(MonthlyStats.category))
+        range_stats = await self.db.execute(select(MonthlyStats.category, func.sum(MonthlyStats.total_amount).label('total_range_amount')).where(MonthlyStats.user_id == self.user_id, (MonthlyStats.year * 12 + MonthlyStats.month).between(start, end)).group_by(MonthlyStats.category))
         db_range_stats = range_stats.mappings().all()
         validated_data = [RangeStatsResponse.model_validate(item).model_dump() for item in db_range_stats]
         data_to_cache = json.dumps(validated_data)
