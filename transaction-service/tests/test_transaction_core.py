@@ -74,6 +74,7 @@ async def test_valid_update_transaction(mock_publish, get_transaction_service, m
     mock_db.execute = AsyncMock(return_value=make_mock_result(fake_transaction))
     mock_recent_amount=fake_transaction.amount
     mock_recent_type=fake_transaction.transaction_type
+    mock_recent_category=fake_transaction.category
     result = await get_transaction_service.update_transaction(
         1,
         fake_transaction_update_request
@@ -88,7 +89,8 @@ async def test_valid_update_transaction(mock_publish, get_transaction_service, m
         category=ExpenseCategory.RESTAURANT,
         created_at=datetime(2026, 8, 4, 12, 0, 0),
         recent_amount=mock_recent_amount,
-        recent_type=mock_recent_type
+        recent_type=mock_recent_type,
+        recent_category=mock_recent_category
     )
     mock_redis.delete.assert_called_once()
     assert result
