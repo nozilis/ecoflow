@@ -13,7 +13,7 @@ async def lifespan(app: FastAPI):
     app.state.rabbitmq_connection = await get_rabbitmq_connection()
     yield
     logger.info('App shuting down')
-    await app.state.rabbitmq_connection.aclose()
+    await app.state.rabbitmq_connection.close()
     await engine.dispose()
 
 app = FastAPI(lifespan=lifespan, title='Authorization Service API')

@@ -16,7 +16,7 @@ async def lifespan(app: FastAPI):
     yield
     logger.info('App shuting down')
     await redis_pool.aclose()
-    await app.state.rabbitmq_connection.aclose()
+    await app.state.rabbitmq_connection.close()
     await engine.dispose()
 
 app = FastAPI(lifespan=lifespan, title='Analytics Service API')
