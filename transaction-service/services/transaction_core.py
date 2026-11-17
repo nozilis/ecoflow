@@ -3,6 +3,7 @@ from sqlalchemy import select
 from enums import TransactionType, ExpenseCategory, IncomeCategory
 from publisher import publish_transaction_events
 from schemas import TransactionResponse
+from redis.exceptions import RedisError
 import json
 import logging
 
@@ -36,20 +37,19 @@ class TransactionService:
                 category=category, 
                 created_at=create_transaction.created_at
                 )
-        await self.cache_delete_handle()
+        await self._invalidate_user_cache()
         return create_transaction
 
     async def get_transactions(self, page, page_size):
         cache_key = f'transactions:{self.user_id}:{page}:{page_size}'
-        cached_data = await self.redis.get(cache_key)
-        if cached_data is not None:
-            data = json.loads(cached_data)
-            return data
+        cache_hit = await self._cache_get(cache_key)
+        if cache_hit is not None:
+            return cache_hit  
         transactions = await self.db.execute(select(Transaction).where(Transaction.user_id == self.user_id).limit(page_size).offset((page-1)*page_size))
         get_transactions = transactions.scalars().all()
         db_transactions = [TransactionResponse.model_validate(item).model_dump(mode='json') for item in get_transactions]
         data_to_cache = json.dumps(db_transactions)
-        await self.redis.set(cache_key, data_to_cache, 300)
+        await self._cache_set(cache_key, data_to_cache, 300)
         return db_transactions
 
     async def delete_transaction(self, transaction_id):
@@ -70,7 +70,7 @@ class TransactionService:
                 category=db_transaction.category, 
                 created_at=db_transaction.created_at
                 )
-        await self.cache_delete_handle()
+        await self._invalidate_user_cache()
 
     async def update_transaction(self, transaction_id, transaction_update_request):
         transaction_is_exist = await self.db.execute(select(Transaction).where(Transaction.user_id == self.user_id, Transaction.id == transaction_id))
@@ -105,13 +105,34 @@ class TransactionService:
             recent_type=recent_type,
             recent_category=recent_category
             )
-        await self.cache_delete_handle()
+        await self._invalidate_user_cache()
         return db_transaction   
 
-    async def cache_delete_handle(self):
-        async for cache_key in self.redis.scan_iter(match=f'transactions:{self.user_id}:*'):
-            await self.redis.delete(cache_key)
-            logger.info(f'Cache with key {cache_key} successfully deleted')
+    async def _cache_get(self, cache_key):
+        try:
+            cached_data = await self.redis.get(cache_key)
+            if cached_data is not None:
+                data = json.loads(cached_data)
+                return data
+        except RedisError as exc:
+            logger.warning('Cache get failed for %s: %s', cache_key, exc)
+
+    async def _cache_set(self, cache_key, data_to_cache, ttl):
+        try:
+            await self.redis.set(cache_key, data_to_cache, ex=ttl)
+        except RedisError as exc:
+            logger.warning('Cache set failed for %s: %s', cache_key, exc)
+
+    async def _invalidate_user_cache(self):
+        try:
+            keys = []
+            async for cache_key in self.redis.scan_iter(match=f'transactions:{self.user_id}:*'):
+                keys.append(cache_key)
+            if keys:
+                await self.redis.unlink(*keys)
+            logger.info(f'Cache for {len(keys)} keys successfully deleted') 
+        except RedisError as exc:
+            logger.warning('Cache invalidation failed for usert %s: %s', self.user_id, exc)
 
 class TransactionNotFound(Exception):
     pass
