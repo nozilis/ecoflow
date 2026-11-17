@@ -127,9 +127,10 @@ async def test_get_monthly_stats(
     mock_db.execute = AsyncMock(return_value=make_mock_results(fake_scalars_monthly_stats))
     mock_redis.get.return_value = None
     result = await get_analytics_service.get_monthly_stats(7, 2026)
-    data = mock_redis.set.call_args.args
-    assert data[0] == 'monthly_stats:1:7:2026'
-    assert data[2] == 300
+    args_data = mock_redis.set.call_args.args
+    kwargs_data = mock_redis.set.call_args.kwargs
+    assert args_data[0] == 'monthly_stats:1:7:2026'
+    assert kwargs_data['ex'] == 300
     assert result
 
 
@@ -149,9 +150,10 @@ async def test_get_yearly_stats(
     mock_db.execute = AsyncMock(return_value=make_mock_mappings(fake_yearly_stats))
     mock_redis.get.return_value = None
     result = await get_analytics_service.get_yearly_stats(2026)
-    data = mock_redis.set.call_args.args
-    assert data[0] == 'yearly_stats:1:2026'
-    assert data[2] == 300
+    args_data = mock_redis.set.call_args.args
+    kwargs_data = mock_redis.set.call_args.kwargs
+    assert args_data[0] == 'yearly_stats:1:2026'
+    assert kwargs_data['ex'] == 300
     assert result
 
 
@@ -171,9 +173,10 @@ async def test_get_range_stats(
     mock_db.execute = AsyncMock(return_value=make_mock_mappings(fake_range_stats))
     mock_redis.get.return_value = None
     result = await get_analytics_service.get_range_stats(2025, 9, 2026, 10)
-    data = mock_redis.set.call_args.args
-    assert data[0] == 'range_stats:1:24309:24322'
-    assert data[2] == 300
+    args_data = mock_redis.set.call_args.args
+    kwargs_data = mock_redis.set.call_args.kwargs
+    assert args_data[0] == 'range_stats:1:24309:24322'
+    assert kwargs_data['ex'] == 300
     assert result
 
 

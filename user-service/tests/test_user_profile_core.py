@@ -147,7 +147,7 @@ async def test_get_user_profile(
                 'weekly_summary_notification': True,
             }
         ),
-        300,
+        ex=300,
     )
     assert result
 
