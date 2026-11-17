@@ -4,13 +4,18 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class AuthConsumerService:
     def __init__(self, data, session):
         self.data = data
         self.session = session
 
     async def handle_user_updated(self):
-        user_id, username, email = self.data['user_id'], self.data.get('username'), self.data.get('email')
+        user_id, username, email = (
+            self.data['user_id'],
+            self.data.get('username'),
+            self.data.get('email'),
+        )
         user_is_exist = await self.session.execute(select(User).where(User.id == user_id))
         db_user = user_is_exist.scalar_one_or_none()
         if db_user is None:

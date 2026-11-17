@@ -1,8 +1,10 @@
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import String, Integer, UniqueConstraint, ForeignKey
 
+
 class Base(DeclarativeBase):
     pass
+
 
 class MonthlyStats(Base):
     __tablename__ = 'monthly_stats'
@@ -14,14 +16,18 @@ class MonthlyStats(Base):
     category: Mapped[str] = mapped_column(String(25))
     transaction_type: Mapped[str] = mapped_column(String(25))
     total_amount: Mapped[int] = mapped_column(Integer)
-    
-    __table_args__ = (UniqueConstraint('user_id', 'year', 'month', 'category', name='month_category_agregation'), )
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'year', 'month', 'category', name='month_category_agregation'),
+    )
+
 
 class UserBudget(Base):
     __tablename__ = 'user_budget'
 
     user_id: Mapped[int] = mapped_column(primary_key=True)
     budget_limit: Mapped[int] = mapped_column(Integer, nullable=True)
+
 
 class BudgetExceedNotification(Base):
     __tablename__ = 'budget_exceed_notification'
@@ -31,4 +37,6 @@ class BudgetExceedNotification(Base):
     year: Mapped[int] = mapped_column(Integer)
     month: Mapped[int] = mapped_column(Integer)
 
-    __table_args__ = (UniqueConstraint('user_id', 'year', 'month', name='month_budget_exceed_notification'), )
+    __table_args__ = (
+        UniqueConstraint('user_id', 'year', 'month', name='month_budget_exceed_notification'),
+    )

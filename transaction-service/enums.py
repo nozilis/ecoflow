@@ -1,5 +1,6 @@
 from enum import StrEnum
 
+
 class ExpenseCategory(StrEnum):
     RESTAURANT = 'Restaurant'
     PRODUCTS = 'Products'
@@ -23,15 +24,18 @@ class ExpenseCategory(StrEnum):
     GIFTS = 'Gifts'
     OTHER = 'Other'
 
+
 class IncomeCategory(StrEnum):
     SALARY = 'Salary'
     TRANSFERS = 'Transfers'
     REFUND = 'Refund'
     OTHER = 'Other'
 
+
 class TransactionType(StrEnum):
     EXPENSE = 'Expense'
     INCOME = 'Income'
+
 
 def GeneralCategories():
     category_pairs = set()

@@ -1,11 +1,13 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+
 @pytest.fixture
 def mock_db():
     result = AsyncMock()
     result.add = MagicMock()
     return result
+
 
 @pytest.fixture
 def make_mock_result():
@@ -13,4 +15,5 @@ def make_mock_result():
         result = MagicMock()
         result.scalar_one_or_none.return_value = return_value
         return result
+
     return _make

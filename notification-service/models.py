@@ -2,8 +2,10 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import String, Boolean, ForeignKey, DateTime, Integer, func
 from datetime import datetime
 
+
 class Base(DeclarativeBase):
     pass
+
 
 class UserContact(Base):
     __tablename__ = 'user_contacts'
@@ -12,12 +14,16 @@ class UserContact(Base):
     email: Mapped[str] = mapped_column(String(100), unique=True)
     username: Mapped[str] = mapped_column(String(50), unique=True)
 
+
 class NotificationSettings(Base):
     __tablename__ = 'notifications_settings'
 
-    user_id: Mapped[int] = mapped_column(ForeignKey('user_contacts.user_id', ondelete='CASCADE'), primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey('user_contacts.user_id', ondelete='CASCADE'), primary_key=True
+    )
     monthly_budget_exceeded_notification: Mapped[bool] = mapped_column(Boolean, default=True)
     weekly_summary_notification: Mapped[bool] = mapped_column(Boolean, default=True)
+
 
 class NotificationLog(Base):
     __tablename__ = 'notifications_logs'

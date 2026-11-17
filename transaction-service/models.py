@@ -3,8 +3,10 @@ from sqlalchemy import DateTime, String, Integer, func, Enum
 from datetime import datetime
 from enums import GeneralCategories, TransactionType
 
+
 class Base(DeclarativeBase):
     pass
+
 
 class Transaction(Base):
     __tablename__ = 'transactions'

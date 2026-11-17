@@ -4,6 +4,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class TransactionConsumerService:
     def __init__(self, data, session, redis):
         self.data = data
@@ -12,7 +13,9 @@ class TransactionConsumerService:
 
     async def handle_user_deleted(self):
         user_id = self.data['user_id']
-        user_transactions_is_exist = await self.session.execute(select(Transaction).where(Transaction.user_id == user_id))
+        user_transactions_is_exist = await self.session.execute(
+            select(Transaction).where(Transaction.user_id == user_id)
+        )
         db_user_transactions = user_transactions_is_exist.scalars().all()
         if db_user_transactions:
             for transaction in db_user_transactions:

@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 5
 
+
 async def run_consumer(handlers: dict[str, callable]):
     connection = await get_rabbitmq_connection()
 
@@ -27,32 +28,29 @@ async def run_consumer(handlers: dict[str, callable]):
     async with connection:
         channel = await connection.channel()
 
-        exchange = await channel.declare_exchange("ecoflow_events", aio_pika.ExchangeType.TOPIC, durable=True)
-        dl_exchange = await channel.declare_exchange("retry_ecoflow_events", aio_pika.ExchangeType.TOPIC, durable=True)
+        exchange = await channel.declare_exchange(
+            'ecoflow_events', aio_pika.ExchangeType.TOPIC, durable=True
+        )
+        dl_exchange = await channel.declare_exchange(
+            'retry_ecoflow_events', aio_pika.ExchangeType.TOPIC, durable=True
+        )
 
         queue = await channel.declare_queue(
-            "auth_service.events", 
-            durable=True, 
-            arguments={
-                'x-dead-letter-exchange': 'retry_ecoflow_events'
-            }
+            'auth_service.events',
+            durable=True,
+            arguments={'x-dead-letter-exchange': 'retry_ecoflow_events'},
         )
         dl_queue = await channel.declare_queue(
-            "auth_service.retry_queue", 
+            'auth_service.retry_queue',
             durable=True,
-            arguments={
-                'x-message-ttl': 5000,
-                'x-dead-letter-exchange': 'ecoflow_events'
-            }
+            arguments={'x-message-ttl': 5000, 'x-dead-letter-exchange': 'ecoflow_events'},
         )
-        final_dl_queue = await channel.declare_queue(
-            "auth_service.dl_queue", durable=True
-        )
+        final_dl_queue = await channel.declare_queue('auth_service.dl_queue', durable=True)
 
         for routing_key in handlers.keys():
             await queue.bind(exchange, routing_key=routing_key)
             await dl_queue.bind(dl_exchange, routing_key=routing_key)
-        
+
         async with queue.iterator() as queue_iter:
             async for message in queue_iter:
                 if stop_event.is_set():
@@ -71,25 +69,22 @@ async def run_consumer(handlers: dict[str, callable]):
                             if retry_count >= MAX_RETRIES:
                                 logger.error(f'Message exceeded retry limit, sending to DLQ: {exc}')
                                 await channel.default_exchange.publish(
-                                aio_pika.Message(body=message.body, headers=message.headers),
-                                routing_key='auth_service.dl_queue'
+                                    aio_pika.Message(body=message.body, headers=message.headers),
+                                    routing_key='auth_service.dl_queue',
                                 )
                             else:
                                 raise
 
-async def handle_user_updated(
-    data: dict, 
-    session: AsyncSession
-):
+
+async def handle_user_updated(data: dict, session: AsyncSession):
     auth_consumer_service = AuthConsumerService(data, session)
     await auth_consumer_service.handle_user_updated()
 
-async def handle_user_deleted(
-    data: dict, 
-    session: AsyncSession
-):
+
+async def handle_user_deleted(data: dict, session: AsyncSession):
     auth_consumer_service = AuthConsumerService(data, session)
     await auth_consumer_service.handle_user_deleted()
+
 
 if __name__ == '__main__':
     handlers = {

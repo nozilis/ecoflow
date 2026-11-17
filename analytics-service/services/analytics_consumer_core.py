@@ -6,6 +6,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class AnalyticsConsumerService:
     def __init__(self, data, session, redis, rabbitmq):
         self.data = data
@@ -16,11 +17,31 @@ class AnalyticsConsumerService:
     async def handle_transaction_created(self):
         date = datetime.fromisoformat(self.data['created_at'])
         year, month = date.year, date.month
-        user_id, category, transaction_type, amount = self.data['user_id'], self.data['category'], self.data['transaction_type'], self.data['amount']
-        monthly_stats_is_exist = await self.session.execute(select(MonthlyStats).where(MonthlyStats.user_id == user_id, MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.category == category, MonthlyStats.transaction_type == transaction_type))
+        user_id, category, transaction_type, amount = (
+            self.data['user_id'],
+            self.data['category'],
+            self.data['transaction_type'],
+            self.data['amount'],
+        )
+        monthly_stats_is_exist = await self.session.execute(
+            select(MonthlyStats).where(
+                MonthlyStats.user_id == user_id,
+                MonthlyStats.year == year,
+                MonthlyStats.month == month,
+                MonthlyStats.category == category,
+                MonthlyStats.transaction_type == transaction_type,
+            )
+        )
         db_monthly_stats = monthly_stats_is_exist.scalar_one_or_none()
         if db_monthly_stats is None:
-            db_monthly_stats = MonthlyStats(user_id = user_id, year = year, month = month, category = category, transaction_type = transaction_type, total_amount = amount)
+            db_monthly_stats = MonthlyStats(
+                user_id=user_id,
+                year=year,
+                month=month,
+                category=category,
+                transaction_type=transaction_type,
+                total_amount=amount,
+            )
             self.session.add(db_monthly_stats)
             logger.info(f'MonthlyStats for user {user_id} successfully created')
         else:
@@ -33,8 +54,24 @@ class AnalyticsConsumerService:
     async def handle_transaction_updated(self):
         date = datetime.fromisoformat(self.data['created_at'])
         year, month = date.year, date.month
-        user_id, category, transaction_type, amount, recent_type, recent_amount, recent_category = self.data['user_id'], self.data['category'], self.data['transaction_type'], self.data['amount'], self.data['recent_type'], self.data['recent_amount'], self.data['recent_category']
-        monthly_stats_is_exist = await self.session.execute(select(MonthlyStats).where(MonthlyStats.user_id == user_id, MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.category == recent_category, MonthlyStats.transaction_type == recent_type))
+        user_id, category, transaction_type, amount, recent_type, recent_amount, recent_category = (
+            self.data['user_id'],
+            self.data['category'],
+            self.data['transaction_type'],
+            self.data['amount'],
+            self.data['recent_type'],
+            self.data['recent_amount'],
+            self.data['recent_category'],
+        )
+        monthly_stats_is_exist = await self.session.execute(
+            select(MonthlyStats).where(
+                MonthlyStats.user_id == user_id,
+                MonthlyStats.year == year,
+                MonthlyStats.month == month,
+                MonthlyStats.category == recent_category,
+                MonthlyStats.transaction_type == recent_type,
+            )
+        )
         db_monthly_stats = monthly_stats_is_exist.scalar_one_or_none()
         if db_monthly_stats:
             if recent_type == 'Income':
@@ -46,15 +83,32 @@ class AnalyticsConsumerService:
             else:
                 new_impact = -amount
             if recent_category == category and recent_type == transaction_type:
-                db_monthly_stats.total_amount = db_monthly_stats.total_amount - old_impact + new_impact
+                db_monthly_stats.total_amount = (
+                    db_monthly_stats.total_amount - old_impact + new_impact
+                )
             else:
                 db_monthly_stats.total_amount -= old_impact
-                new_record = await self.session.execute(select(MonthlyStats).where(MonthlyStats.user_id == user_id, MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.category == category, MonthlyStats.transaction_type == transaction_type))
+                new_record = await self.session.execute(
+                    select(MonthlyStats).where(
+                        MonthlyStats.user_id == user_id,
+                        MonthlyStats.year == year,
+                        MonthlyStats.month == month,
+                        MonthlyStats.category == category,
+                        MonthlyStats.transaction_type == transaction_type,
+                    )
+                )
                 db_new_record = new_record.scalar_one_or_none()
                 if db_new_record:
                     db_new_record.total_amount += new_impact
                 else:
-                    db_new_record = MonthlyStats(user_id = user_id, year = year, month = month, category = category, transaction_type = transaction_type, total_amount = amount)
+                    db_new_record = MonthlyStats(
+                        user_id=user_id,
+                        year=year,
+                        month=month,
+                        category=category,
+                        transaction_type=transaction_type,
+                        total_amount=amount,
+                    )
                     self.session.add(db_new_record)
             await self.session.commit()
             logger.info(f'MonthlyStats for user {user_id} successfully updated')
@@ -66,8 +120,21 @@ class AnalyticsConsumerService:
     async def handle_transaction_deleted(self):
         date = datetime.fromisoformat(self.data['created_at'])
         year, month = date.year, date.month
-        user_id, category, transaction_type, amount = self.data['user_id'], self.data['category'], self.data['transaction_type'], self.data['amount']
-        monthly_stats_is_exist = await self.session.execute(select(MonthlyStats).where(MonthlyStats.user_id == user_id, MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.category == category, MonthlyStats.transaction_type == transaction_type))
+        user_id, category, transaction_type, amount = (
+            self.data['user_id'],
+            self.data['category'],
+            self.data['transaction_type'],
+            self.data['amount'],
+        )
+        monthly_stats_is_exist = await self.session.execute(
+            select(MonthlyStats).where(
+                MonthlyStats.user_id == user_id,
+                MonthlyStats.year == year,
+                MonthlyStats.month == month,
+                MonthlyStats.category == category,
+                MonthlyStats.transaction_type == transaction_type,
+            )
+        )
         db_monthly_stats = monthly_stats_is_exist.scalar_one_or_none()
         if db_monthly_stats:
             db_monthly_stats.total_amount -= amount
@@ -80,7 +147,9 @@ class AnalyticsConsumerService:
 
     async def handle_budget_limit_updated(self):
         user_id, budget_limit = self.data['user_id'], self.data['budget_limit']
-        user_budget_is_exist = await self.session.execute(select(UserBudget).where(UserBudget.user_id == user_id))
+        user_budget_is_exist = await self.session.execute(
+            select(UserBudget).where(UserBudget.user_id == user_id)
+        )
         db_user_budget = user_budget_is_exist.scalar_one_or_none()
         if db_user_budget is None:
             db_user_budget = UserBudget(user_id=user_id, budget_limit=budget_limit)
@@ -93,8 +162,12 @@ class AnalyticsConsumerService:
 
     async def handle_user_deleted(self):
         user_id = self.data['user_id']
-        user_monthly_stats_is_exist = await self.session.execute(select(MonthlyStats).where(MonthlyStats.user_id == user_id))
-        user_budget_is_exist = await self.session.execute(select(UserBudget).where(UserBudget.user_id == user_id))
+        user_monthly_stats_is_exist = await self.session.execute(
+            select(MonthlyStats).where(MonthlyStats.user_id == user_id)
+        )
+        user_budget_is_exist = await self.session.execute(
+            select(UserBudget).where(UserBudget.user_id == user_id)
+        )
         db_user_monthly_stats = user_monthly_stats_is_exist.scalars().all()
         db_user_budget = user_budget_is_exist.scalar_one_or_none()
         if db_user_monthly_stats:
@@ -130,8 +203,17 @@ class AnalyticsConsumerService:
         date = datetime.fromisoformat(self.data['created_at'])
         year, month = date.year, date.month
         user_id = self.data['user_id']
-        monthly_stats_total = await self.session.execute(select(func.sum(MonthlyStats.total_amount).label('monthly_stats_total')).where(MonthlyStats.user_id == user_id, MonthlyStats.year == year, MonthlyStats.month == month, MonthlyStats.transaction_type == 'Expense'))
-        user_budget_limit = await self.session.execute(select(UserBudget.budget_limit).where(UserBudget.user_id == user_id))
+        monthly_stats_total = await self.session.execute(
+            select(func.sum(MonthlyStats.total_amount).label('monthly_stats_total')).where(
+                MonthlyStats.user_id == user_id,
+                MonthlyStats.year == year,
+                MonthlyStats.month == month,
+                MonthlyStats.transaction_type == 'Expense',
+            )
+        )
+        user_budget_limit = await self.session.execute(
+            select(UserBudget.budget_limit).where(UserBudget.user_id == user_id)
+        )
         db_monthly_stats_total = monthly_stats_total.scalar_one_or_none()
         db_user_budget_limit = user_budget_limit.scalar_one_or_none()
         print(db_monthly_stats_total, db_user_budget_limit)
@@ -139,22 +221,38 @@ class AnalyticsConsumerService:
             logger.warning(f'User {user_id} transactions not found')
         if db_user_budget_limit is None:
             logger.warning(f'User {user_id} budget limit not found')
-        if (db_monthly_stats_total and db_user_budget_limit) and (month == datetime.now().month and year == datetime.now().year):
-            budget_exceed_notification_is_exist = await self.session.execute(select(BudgetExceedNotification).where(BudgetExceedNotification.user_id == user_id, BudgetExceedNotification.month == month, BudgetExceedNotification.year == year))
+        if (db_monthly_stats_total and db_user_budget_limit) and (
+            month == datetime.now().month and year == datetime.now().year
+        ):
+            budget_exceed_notification_is_exist = await self.session.execute(
+                select(BudgetExceedNotification).where(
+                    BudgetExceedNotification.user_id == user_id,
+                    BudgetExceedNotification.month == month,
+                    BudgetExceedNotification.year == year,
+                )
+            )
             db_budget_exceed_notification = budget_exceed_notification_is_exist.scalar_one_or_none()
             if db_monthly_stats_total > db_user_budget_limit:
                 if db_budget_exceed_notification is None:
                     create_budget_exceed_notification = BudgetExceedNotification(
-                        user_id = user_id,
-                        month = month,
-                        year = year
+                        user_id=user_id, month=month, year=year
                     )
                     self.session.add(create_budget_exceed_notification)
                     await self.session.commit()
-                    logger.info(f'Budget exceed notification for user {user_id} successfully created')
-                    await publish_analytics_events('exceed', user_id, self.rabbitmq, monthly_stats_total=db_monthly_stats_total, user_budget_limit=db_user_budget_limit)
+                    logger.info(
+                        f'Budget exceed notification for user {user_id} successfully created'
+                    )
+                    await publish_analytics_events(
+                        'exceed',
+                        user_id,
+                        self.rabbitmq,
+                        monthly_stats_total=db_monthly_stats_total,
+                        user_budget_limit=db_user_budget_limit,
+                    )
             else:
                 if db_budget_exceed_notification is not None:
                     await self.session.delete(db_budget_exceed_notification)
                     await self.session.commit()
-                    logger.info(f'User {user_id} budget is not exceeded, notification for {month}-{year} successfully deleted')   
+                    logger.info(
+                        f'User {user_id} budget is not exceeded, notification for {month}-{year} successfully deleted'
+                    )

@@ -7,6 +7,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info('App starting up')
@@ -15,6 +16,7 @@ async def lifespan(app: FastAPI):
     logger.info('App shuting down')
     await app.state.rabbitmq_connection.close()
     await engine.dispose()
+
 
 app = FastAPI(lifespan=lifespan, title='Authorization Service API')
 app.include_router(auth.router)

@@ -1,6 +1,7 @@
 from pydantic import BaseModel, model_validator, EmailStr, ConfigDict
 from datetime import datetime
 
+
 class UserCreate(BaseModel):
     username: str
     password: str
@@ -13,7 +14,8 @@ class UserCreate(BaseModel):
         if data['password'] != data['confirm_password']:
             raise ValueError('Поля регистрации заполнены неверно!')
         return data
-    
+
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -21,6 +23,7 @@ class UserResponse(BaseModel):
     username: str
     email: EmailStr
     registered_at: datetime
+
 
 class UserLogin(BaseModel):
     username: str

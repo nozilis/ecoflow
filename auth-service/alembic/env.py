@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 from decouple import Config, RepositoryEnv
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 env_config = Config(RepositoryEnv(os.path.join(BASE_DIR, '.env')))
 
@@ -52,7 +53,7 @@ def run_migrations_offline() -> None:
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
+        dialect_opts={'paramstyle': 'named'},
     )
 
     with context.begin_transaction():
@@ -72,11 +73,11 @@ async def run_async_migrations() -> None:
 
     """
 
-    config.set_main_option("sqlalchemy.url", env_config("DATABASE_URL"))
+    config.set_main_option('sqlalchemy.url', env_config('DATABASE_URL'))
 
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+        prefix='sqlalchemy.',
         poolclass=pool.NullPool,
     )
 

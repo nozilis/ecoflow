@@ -2,6 +2,7 @@ from pydantic import BaseModel, ConfigDict
 from enums import VisibilityChoice
 from typing import Optional
 
+
 class UserProfileResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -13,6 +14,7 @@ class UserProfileResponse(BaseModel):
     visibility_choice: VisibilityChoice
     monthly_budget_exceeded_notification: bool
     weekly_summary_notification: bool
+
 
 class UserProfileUpdate(BaseModel):
     username: Optional[str] = None

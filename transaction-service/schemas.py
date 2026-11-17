@@ -3,10 +3,13 @@ from typing import Optional, Self
 from enums import TransactionType, ExpenseCategory, IncomeCategory
 from datetime import datetime
 
+
 class TransactionCreate(BaseModel):
     amount: int
     transaction_type: TransactionType
-    category: Optional[ExpenseCategory | IncomeCategory] = None #Union enum classes for typification
+    category: Optional[ExpenseCategory | IncomeCategory] = (
+        None  # Union enum classes for typification
+    )
     description: Optional[str] = None
 
     @model_validator(mode='after')
@@ -24,7 +27,8 @@ class TransactionCreate(BaseModel):
             else:
                 self.category = IncomeCategory.OTHER
         return self
-    
+
+
 class TransactionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -34,6 +38,7 @@ class TransactionResponse(BaseModel):
     category: ExpenseCategory | IncomeCategory
     description: Optional[str] = None
     created_at: datetime
+
 
 class TransactionUpdate(BaseModel):
     amount: Optional[int] = None

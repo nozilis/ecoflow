@@ -8,6 +8,7 @@ from rabbitmq_client import get_rabbitmq_connection
 
 logger = logging.getLogger(__name__)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info('App starting up')
@@ -18,6 +19,7 @@ async def lifespan(app: FastAPI):
     await redis_pool.aclose()
     await app.state.rabbitmq_connection.close()
     await engine.dispose()
+
 
 app = FastAPI(lifespan=lifespan, title='Analytics Service API')
 app.include_router(analytics.router)

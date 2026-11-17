@@ -9,6 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class AuthService:
     def __init__(self, db, rabbitmq):
         self.db = db
@@ -16,18 +17,26 @@ class AuthService:
 
     async def register_user(self, user):
         hashed_password = bcrypt.hash(user.password)
-        user_is_exist = await self.db.execute(select(User).where(or_(User.username == user.username, User.email == user.email)))
+        user_is_exist = await self.db.execute(
+            select(User).where(or_(User.username == user.username, User.email == user.email))
+        )
         db_user = user_is_exist.scalar_one_or_none()
         if db_user is None:
             create_user = User(
-                username = user.username, 
-                hashed_password = hashed_password, 
-                email = user.email)
+                username=user.username, hashed_password=hashed_password, email=user.email
+            )
             try:
                 self.db.add(create_user)
                 await self.db.commit()
                 await self.db.refresh(create_user)
-                await publish_user_events('created', create_user.id, self.rabbitmq, username=user.username, email=user.email, registered_at=create_user.registered_at)
+                await publish_user_events(
+                    'created',
+                    create_user.id,
+                    self.rabbitmq,
+                    username=user.username,
+                    email=user.email,
+                    registered_at=create_user.registered_at,
+                )
                 logger.info('User successfully registered')
                 return UserResponse.model_validate(create_user)
             except IntegrityError as e:
@@ -55,14 +64,18 @@ class AuthService:
             logger.warning('User fails verification')
             raise InvalidUsernameOrPassword('Invalid username or password')
 
+
 class UsernameAndEmailConflict(Exception):
     pass
+
 
 class UsernameConflict(Exception):
     pass
 
+
 class EmailConflict(Exception):
     pass
+
 
 class InvalidUsernameOrPassword(Exception):
     pass

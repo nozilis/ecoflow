@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 5
 
+
 async def run_consumer(handlers: dict[str, callable]):
     connection = await get_rabbitmq_connection()
 
@@ -29,27 +30,24 @@ async def run_consumer(handlers: dict[str, callable]):
     async with connection:
         channel = await connection.channel()
 
-        exchange = await channel.declare_exchange("ecoflow_events", aio_pika.ExchangeType.TOPIC, durable=True)
-        dl_exchange = await channel.declare_exchange("retry_ecoflow_events", aio_pika.ExchangeType.TOPIC, durable=True)
+        exchange = await channel.declare_exchange(
+            'ecoflow_events', aio_pika.ExchangeType.TOPIC, durable=True
+        )
+        dl_exchange = await channel.declare_exchange(
+            'retry_ecoflow_events', aio_pika.ExchangeType.TOPIC, durable=True
+        )
 
         queue = await channel.declare_queue(
-            "transaction_service.events", 
-            durable=True, 
-            arguments={
-                'x-dead-letter-exchange': 'retry_ecoflow_events'
-            }
+            'transaction_service.events',
+            durable=True,
+            arguments={'x-dead-letter-exchange': 'retry_ecoflow_events'},
         )
         dl_queue = await channel.declare_queue(
-            "transaction_service.retry_queue", 
+            'transaction_service.retry_queue',
             durable=True,
-            arguments={
-                'x-message-ttl': 5000,
-                'x-dead-letter-exchange': 'ecoflow_events'
-            }
+            arguments={'x-message-ttl': 5000, 'x-dead-letter-exchange': 'ecoflow_events'},
         )
-        final_dl_queue = await channel.declare_queue(
-            "transaction_service.dl_queue", durable=True
-        )
+        final_dl_queue = await channel.declare_queue('transaction_service.dl_queue', durable=True)
 
         for routing_key in handlers.keys():
             await queue.bind(exchange, routing_key=routing_key)
@@ -76,20 +74,18 @@ async def run_consumer(handlers: dict[str, callable]):
                                 logger.error(f'Message exceeded retry limit, sending to DLQ: {exc}')
                                 await channel.default_exchange.publish(
                                     aio_pika.Message(body=message.body, headers=message.headers),
-                                    routing_key='transaction_service.dl_queue'
+                                    routing_key='transaction_service.dl_queue',
                                 )
                             else:
                                 raise
 
-async def handle_user_deleted(
-    data: dict,
-    session: AsyncSession,
-    redis: Redis
-):
+
+async def handle_user_deleted(data: dict, session: AsyncSession, redis: Redis):
     transaction_consumer_service = TransactionConsumerService(data, session, redis)
     await transaction_consumer_service.handle_user_deleted()
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     handlers = {
         'user.deleted': handle_user_deleted,
     }

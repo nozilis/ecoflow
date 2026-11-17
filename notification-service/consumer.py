@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 5
 
+
 async def run_consumer(handlers: dict[str, callable]):
     connection = await get_rabbitmq_connection()
 
@@ -23,31 +24,28 @@ async def run_consumer(handlers: dict[str, callable]):
     loop = asyncio.get_running_loop()
     loop.add_signal_handler(signal.SIGTERM, handle_shutdown)
     loop.add_signal_handler(signal.SIGINT, handle_shutdown)
-                            
+
     async with connection:
         channel = await connection.channel()
 
-        exchange = await channel.declare_exchange("ecoflow_events", aio_pika.ExchangeType.TOPIC, durable=True)
-        dl_exchange = await channel.declare_exchange("retry_ecoflow_events", aio_pika.ExchangeType.TOPIC, durable=True)
+        exchange = await channel.declare_exchange(
+            'ecoflow_events', aio_pika.ExchangeType.TOPIC, durable=True
+        )
+        dl_exchange = await channel.declare_exchange(
+            'retry_ecoflow_events', aio_pika.ExchangeType.TOPIC, durable=True
+        )
 
         queue = await channel.declare_queue(
-            "notification_service.events", 
-            durable=True, 
-            arguments={
-                'x-dead-letter-exchange': 'retry_ecoflow_events'
-            }
+            'notification_service.events',
+            durable=True,
+            arguments={'x-dead-letter-exchange': 'retry_ecoflow_events'},
         )
         dl_queue = await channel.declare_queue(
-            "notification_service.retry_queue", 
+            'notification_service.retry_queue',
             durable=True,
-            arguments={
-                'x-message-ttl': 5000,
-                'x-dead-letter-exchange': 'ecoflow_events'
-            }
+            arguments={'x-message-ttl': 5000, 'x-dead-letter-exchange': 'ecoflow_events'},
         )
-        final_dl_queue = await channel.declare_queue(
-            "notification_service.dl_queue", durable=True
-        )
+        final_dl_queue = await channel.declare_queue('notification_service.dl_queue', durable=True)
 
         for routing_key in handlers.keys():
             await queue.bind(exchange, routing_key=routing_key)
@@ -71,48 +69,39 @@ async def run_consumer(handlers: dict[str, callable]):
                             if retry_count >= MAX_RETRIES:
                                 logger.error(f'Message exceeded retry limit, sending to DLQ: {exc}')
                                 await channel.default_exchange.publish(
-                                aio_pika.Message(body=message.body, headers=message.headers),
-                                routing_key='notification_service.dl_queue'
+                                    aio_pika.Message(body=message.body, headers=message.headers),
+                                    routing_key='notification_service.dl_queue',
                                 )
                             else:
                                 raise
 
-async def handle_user_created(
-    data: dict, 
-    session: AsyncSession
-):
+
+async def handle_user_created(data: dict, session: AsyncSession):
     notification_consumer_service = NotificationConsumerService(data, session)
     await notification_consumer_service.handle_user_created()
 
-async def handle_user_updated(
-    data: dict, 
-    session: AsyncSession
-):
+
+async def handle_user_updated(data: dict, session: AsyncSession):
     notification_consumer_service = NotificationConsumerService(data, session)
     await notification_consumer_service.handle_user_updated()
 
-async def handle_user_deleted(
-    data: dict, 
-    session: AsyncSession
-):
+
+async def handle_user_deleted(data: dict, session: AsyncSession):
     notification_consumer_service = NotificationConsumerService(data, session)
     await notification_consumer_service.handle_user_deleted()
 
-async def handle_budget_exceed(
-    data: dict, 
-    session: AsyncSession
-):
+
+async def handle_budget_exceed(data: dict, session: AsyncSession):
     notification_consumer_service = NotificationConsumerService(data, session)
     await notification_consumer_service.handle_budget_exceed()
 
-async def handle_settings_updated(
-    data: dict, 
-    session: AsyncSession
-):
+
+async def handle_settings_updated(data: dict, session: AsyncSession):
     notification_consumer_service = NotificationConsumerService(data, session)
     await notification_consumer_service.handle_settings_updated()
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     handlers = {
         'user.created': handle_user_created,
         'user.updated': handle_user_updated,

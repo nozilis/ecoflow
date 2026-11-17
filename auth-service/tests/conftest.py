@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime
 from models import User
 
+
 @pytest.fixture
 def mock_db():
     result = AsyncMock()
@@ -10,13 +11,22 @@ def mock_db():
     result.refresh = AsyncMock(side_effect=fake_refresh)
     return result
 
+
 @pytest.fixture
 def mock_rabbitmq():
     return AsyncMock()
 
+
 @pytest.fixture
 def fake_user():
-    return User(id=2, username='test', hashed_password='a8dh8H@O*GR@#*(Ffbsa)', email='test_999@example.com', registered_at=datetime(2026, 6, 4, 12, 0, 0))
+    return User(
+        id=2,
+        username='test',
+        hashed_password='a8dh8H@O*GR@#*(Ffbsa)',
+        email='test_999@example.com',
+        registered_at=datetime(2026, 6, 4, 12, 0, 0),
+    )
+
 
 @pytest.fixture
 def make_mock_result():
@@ -24,7 +34,9 @@ def make_mock_result():
         result = MagicMock()
         result.scalar_one_or_none.return_value = return_value
         return result
+
     return _make
+
 
 async def fake_refresh(obj):
     obj.id = 1

@@ -8,6 +8,7 @@ import json
 
 logger = logging.getLogger(__name__)
 
+
 class AnalyticsService:
     def __init__(self, db, user_id, redis):
         self.db = db
@@ -22,9 +23,17 @@ class AnalyticsService:
         cache_hit = await self._cache_get(cache_key)
         if cache_hit is not None:
             return cache_hit
-        monthly_stats = await self.db.execute(select(MonthlyStats).where(MonthlyStats.user_id == self.user_id, MonthlyStats.month == month, MonthlyStats.year == year))
+        monthly_stats = await self.db.execute(
+            select(MonthlyStats).where(
+                MonthlyStats.user_id == self.user_id,
+                MonthlyStats.month == month,
+                MonthlyStats.year == year,
+            )
+        )
         db_monthly_stats = monthly_stats.scalars().all()
-        validated_data = [MonthlyStatsResponse.model_validate(item).model_dump() for item in db_monthly_stats]
+        validated_data = [
+            MonthlyStatsResponse.model_validate(item).model_dump() for item in db_monthly_stats
+        ]
         data_to_cache = json.dumps(validated_data)
         await self._cache_set(cache_key, data_to_cache, 300)
         return validated_data
@@ -36,9 +45,19 @@ class AnalyticsService:
         cache_hit = await self._cache_get(cache_key)
         if cache_hit is not None:
             return cache_hit
-        yearly_stats = await self.db.execute(select(MonthlyStats.year, MonthlyStats.category, func.sum(MonthlyStats.total_amount).label('total_year_amount')).where(MonthlyStats.year == year, MonthlyStats.user_id == self.user_id).group_by(MonthlyStats.year, MonthlyStats.category))
+        yearly_stats = await self.db.execute(
+            select(
+                MonthlyStats.year,
+                MonthlyStats.category,
+                func.sum(MonthlyStats.total_amount).label('total_year_amount'),
+            )
+            .where(MonthlyStats.year == year, MonthlyStats.user_id == self.user_id)
+            .group_by(MonthlyStats.year, MonthlyStats.category)
+        )
         db_yearly_stats = yearly_stats.mappings().all()
-        validated_data = [YearlyStatsResponse.model_validate(item).model_dump() for item in db_yearly_stats]
+        validated_data = [
+            YearlyStatsResponse.model_validate(item).model_dump() for item in db_yearly_stats
+        ]
         data_to_cache = json.dumps(validated_data)
         await self._cache_set(cache_key, data_to_cache, 300)
         return validated_data
@@ -55,9 +74,21 @@ class AnalyticsService:
         cache_hit = await self._cache_get(cache_key)
         if cache_hit is not None:
             return cache_hit
-        range_stats = await self.db.execute(select(MonthlyStats.category, func.sum(MonthlyStats.total_amount).label('total_range_amount')).where(MonthlyStats.user_id == self.user_id, (MonthlyStats.year * 12 + MonthlyStats.month).between(start, end)).group_by(MonthlyStats.category))
+        range_stats = await self.db.execute(
+            select(
+                MonthlyStats.category,
+                func.sum(MonthlyStats.total_amount).label('total_range_amount'),
+            )
+            .where(
+                MonthlyStats.user_id == self.user_id,
+                (MonthlyStats.year * 12 + MonthlyStats.month).between(start, end),
+            )
+            .group_by(MonthlyStats.category)
+        )
         db_range_stats = range_stats.mappings().all()
-        validated_data = [RangeStatsResponse.model_validate(item).model_dump() for item in db_range_stats]
+        validated_data = [
+            RangeStatsResponse.model_validate(item).model_dump() for item in db_range_stats
+        ]
         data_to_cache = json.dumps(validated_data)
         await self._cache_set(cache_key, data_to_cache, 300)
         return validated_data

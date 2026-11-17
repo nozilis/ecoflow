@@ -3,8 +3,10 @@ from sqlalchemy import String, JSON, Enum, Integer, Boolean
 from enums import VisibilityChoice
 from typing import Dict
 
+
 class Base(DeclarativeBase):
     pass
+
 
 class UserProfile(Base):
     __tablename__ = 'user_profiles'
@@ -16,6 +18,8 @@ class UserProfile(Base):
     biography: Mapped[str] = mapped_column(String(750), nullable=True)
     budget_limit: Mapped[int] = mapped_column(Integer, nullable=True)
     social_links: Mapped[Dict[str, str]] = mapped_column(JSON, nullable=True)
-    visibility_choice: Mapped[VisibilityChoice] = mapped_column(Enum(VisibilityChoice), default=VisibilityChoice.PRIVATE)
+    visibility_choice: Mapped[VisibilityChoice] = mapped_column(
+        Enum(VisibilityChoice), default=VisibilityChoice.PRIVATE
+    )
     monthly_budget_exceeded_notification: Mapped[bool] = mapped_column(Boolean, default=True)
     weekly_summary_notification: Mapped[bool] = mapped_column(Boolean, default=True)

@@ -9,6 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class TransactionService:
     def __init__(self, db, user_id, redis, rabbitmq):
         self.db = db
@@ -18,25 +19,27 @@ class TransactionService:
 
     async def create_transaction(self, amount, transaction_type, category, description):
         create_transaction = Transaction(
-            user_id = self.user_id, 
-            amount = amount, 
-            transaction_type = transaction_type, 
-            category = category, 
-            description = description
-            )
+            user_id=self.user_id,
+            amount=amount,
+            transaction_type=transaction_type,
+            category=category,
+            description=description,
+        )
         self.db.add(create_transaction)
         await self.db.commit()
         await self.db.refresh(create_transaction)
-        logger.info(f'Transaction {create_transaction.id} by user {self.user_id} successfully created')
+        logger.info(
+            f'Transaction {create_transaction.id} by user {self.user_id} successfully created'
+        )
         await publish_transaction_events(
-                'created', 
-                self.user_id,
-                self.rabbitmq, 
-                amount=amount, 
-                transaction_type=transaction_type, 
-                category=category, 
-                created_at=create_transaction.created_at
-                )
+            'created',
+            self.user_id,
+            self.rabbitmq,
+            amount=amount,
+            transaction_type=transaction_type,
+            category=category,
+            created_at=create_transaction.created_at,
+        )
         await self._invalidate_user_cache()
         return create_transaction
 
@@ -44,16 +47,29 @@ class TransactionService:
         cache_key = f'transactions:{self.user_id}:{page}:{page_size}'
         cache_hit = await self._cache_get(cache_key)
         if cache_hit is not None:
-            return cache_hit  
-        transactions = await self.db.execute(select(Transaction).where(Transaction.user_id == self.user_id).order_by(Transaction.id.desc()).limit(page_size).offset((page-1)*page_size))
+            return cache_hit
+        transactions = await self.db.execute(
+            select(Transaction)
+            .where(Transaction.user_id == self.user_id)
+            .order_by(Transaction.id.desc())
+            .limit(page_size)
+            .offset((page - 1) * page_size)
+        )
         get_transactions = transactions.scalars().all()
-        db_transactions = [TransactionResponse.model_validate(item).model_dump(mode='json') for item in get_transactions]
+        db_transactions = [
+            TransactionResponse.model_validate(item).model_dump(mode='json')
+            for item in get_transactions
+        ]
         data_to_cache = json.dumps(db_transactions)
         await self._cache_set(cache_key, data_to_cache, 300)
         return db_transactions
 
     async def delete_transaction(self, transaction_id):
-        transaction_is_exist = await self.db.execute(select(Transaction).where(Transaction.id == transaction_id, Transaction.user_id == self.user_id)) 
+        transaction_is_exist = await self.db.execute(
+            select(Transaction).where(
+                Transaction.id == transaction_id, Transaction.user_id == self.user_id
+            )
+        )
         db_transaction = transaction_is_exist.scalar_one_or_none()
         if db_transaction is None:
             logger.warning(f'Transaction {transaction_id} not found')
@@ -62,25 +78,35 @@ class TransactionService:
         await self.db.commit()
         logger.info(f'Transaction {transaction_id} successfully deleted')
         await publish_transaction_events(
-                'deleted', 
-                self.user_id, 
-                self.rabbitmq,
-                amount=db_transaction.amount, 
-                transaction_type=db_transaction.transaction_type, 
-                category=db_transaction.category, 
-                created_at=db_transaction.created_at
-                )
+            'deleted',
+            self.user_id,
+            self.rabbitmq,
+            amount=db_transaction.amount,
+            transaction_type=db_transaction.transaction_type,
+            category=db_transaction.category,
+            created_at=db_transaction.created_at,
+        )
         await self._invalidate_user_cache()
 
     async def update_transaction(self, transaction_id, transaction_update_request):
-        transaction_is_exist = await self.db.execute(select(Transaction).where(Transaction.user_id == self.user_id, Transaction.id == transaction_id))
+        transaction_is_exist = await self.db.execute(
+            select(Transaction).where(
+                Transaction.user_id == self.user_id, Transaction.id == transaction_id
+            )
+        )
         db_transaction = transaction_is_exist.scalar_one_or_none()
         if db_transaction is None:
             logger.warning(f'Transaction {transaction_id} not found')
             raise TransactionNotFound('Transaction not found')
-        recent_amount, recent_type, recent_category = db_transaction.amount, db_transaction.transaction_type, db_transaction.category
+        recent_amount, recent_type, recent_category = (
+            db_transaction.amount,
+            db_transaction.transaction_type,
+            db_transaction.category,
+        )
         transaction_update_dump = transaction_update_request.model_dump(exclude_unset=True)
-        final_type = transaction_update_dump.get('transaction_type', db_transaction.transaction_type)
+        final_type = transaction_update_dump.get(
+            'transaction_type', db_transaction.transaction_type
+        )
         final_category = transaction_update_dump.get('category', db_transaction.category)
         if final_type == TransactionType.EXPENSE:
             if not isinstance(final_category, ExpenseCategory):
@@ -94,19 +120,21 @@ class TransactionService:
         await self.db.commit()
         logger.info(f'Transaction {transaction_id} successfully updated')
         await publish_transaction_events(
-            'updated', 
-            self.user_id, 
+            'updated',
+            self.user_id,
             self.rabbitmq,
-            amount=transaction_update_dump.get('amount', db_transaction.amount), 
-            transaction_type=transaction_update_dump.get('transaction_type', db_transaction.transaction_type), 
-            category=transaction_update_dump.get('category', db_transaction.category), 
-            created_at=db_transaction.created_at, 
-            recent_amount=recent_amount, 
+            amount=transaction_update_dump.get('amount', db_transaction.amount),
+            transaction_type=transaction_update_dump.get(
+                'transaction_type', db_transaction.transaction_type
+            ),
+            category=transaction_update_dump.get('category', db_transaction.category),
+            created_at=db_transaction.created_at,
+            recent_amount=recent_amount,
             recent_type=recent_type,
-            recent_category=recent_category
-            )
+            recent_category=recent_category,
+        )
         await self._invalidate_user_cache()
-        return db_transaction   
+        return db_transaction
 
     async def _cache_get(self, cache_key):
         try:
@@ -130,12 +158,14 @@ class TransactionService:
                 keys.append(cache_key)
             if keys:
                 await self.redis.unlink(*keys)
-            logger.info(f'Cache for {len(keys)} keys successfully deleted') 
+            logger.info(f'Cache for {len(keys)} keys successfully deleted')
         except RedisError as exc:
             logger.warning('Cache invalidation failed for usert %s: %s', self.user_id, exc)
 
+
 class TransactionNotFound(Exception):
     pass
+
 
 class InvalidCategory(Exception):
     pass
