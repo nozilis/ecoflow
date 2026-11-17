@@ -56,7 +56,7 @@ async def test_create_transaction(
         category=ExpenseCategory.TRAVEL,
         created_at=datetime(2026, 8, 4, 12, 0, 0),
     )
-    mock_redis.delete.assert_called_once()
+    mock_redis.unlink.assert_called_once_with('transactions:1:1:20')
     assert result
 
 
@@ -83,7 +83,7 @@ async def test_delete_transaction(
         category=ExpenseCategory.RESTAURANT,
         created_at=datetime(2026, 8, 4, 12, 0, 0),
     )
-    mock_redis.delete.assert_called_once()
+    mock_redis.unlink.assert_called_once_with('transactions:1:1:20')
 
 
 @patch('services.transaction_core.publish_transaction_events', new_callable=AsyncMock)
@@ -115,7 +115,7 @@ async def test_valid_update_transaction(
         recent_type=mock_recent_type,
         recent_category=mock_recent_category,
     )
-    mock_redis.delete.assert_called_once()
+    mock_redis.unlink.assert_called_once_with('transactions:1:1:20')
     assert result
 
 
