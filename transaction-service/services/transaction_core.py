@@ -45,7 +45,7 @@ class TransactionService:
         cache_hit = await self._cache_get(cache_key)
         if cache_hit is not None:
             return cache_hit  
-        transactions = await self.db.execute(select(Transaction).where(Transaction.user_id == self.user_id).limit(page_size).offset((page-1)*page_size))
+        transactions = await self.db.execute(select(Transaction).where(Transaction.user_id == self.user_id).order_by(Transaction.id.desc()).limit(page_size).offset((page-1)*page_size))
         get_transactions = transactions.scalars().all()
         db_transactions = [TransactionResponse.model_validate(item).model_dump(mode='json') for item in get_transactions]
         data_to_cache = json.dumps(db_transactions)
