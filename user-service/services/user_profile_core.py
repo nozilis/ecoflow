@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from enums import VisibilityChoice
 from publisher import publish_user_events
 from schemas import UserProfileResponse
+from redis.exceptions import RedisError
 import json
 import logging
 
@@ -19,10 +20,9 @@ class UserProfileService:
     async def get_user_profile(self, user_id):
         user_id = user_id or self.request_user
         cache_key = f'user_profile:{user_id}'
-        cache_data = await self.redis.get(cache_key)
-        if cache_data is not None:
-            data = json.loads(cache_data)
-            return data
+        cache_hit = await self._cache_get(cache_key)
+        if cache_hit is not None:
+            return cache_hit
         user_profile_is_exist = await self.db.execute(select(UserProfile).where(UserProfile.user_id == user_id))
         db_user_profile = user_profile_is_exist.scalar_one_or_none()
         if db_user_profile is None:
@@ -32,10 +32,10 @@ class UserProfileService:
             if db_user_profile.visibility_choice == VisibilityChoice.PRIVATE and self.request_user != user_id:
                 logger.warning(f'User profile for user {user_id} visibility choice is private and request user is not owner of this account')
                 raise UserProfileNotFound('User not found')
-            validated_data = UserProfileResponse.model_validate(db_user_profile).model_dump()
+            validated_data = UserProfileResponse.model_validate(db_user_profile).model_dump(mode='json')
             if db_user_profile.visibility_choice == VisibilityChoice.PUBLIC:
                 data_to_cache = json.dumps(validated_data)
-                await self.redis.set(cache_key, data_to_cache, 300)
+                await self._cache_set(cache_key, data_to_cache, 300)
             return validated_data
 
     async def update_user_profile(self, user_profile_update_request):
@@ -62,7 +62,7 @@ class UserProfileService:
             setattr(db_user_profile, item, value)
         try:
             await self.db.commit()
-            await self.cache_delete_handle(self.request_user)
+            await self._invalidate_user_cache(self.request_user)
             logger.info(f'User profile for user {self.request_user} successfully updated')
             if 'username' in user_profile_update_dump or 'email' in user_profile_update_dump:
                 await publish_user_events('updated', self.request_user, self.rabbitmq, **{k: v for k, v in user_profile_update_dump_items if k in {'username', 'email'}})
@@ -86,13 +86,31 @@ class UserProfileService:
         await self.db.delete(db_user_profile)
         await self.db.commit()
         logger.info(f'User profile for user {self.request_user} successfully deleted')
-        await self.cache_delete_handle(self.request_user)
+        await self._invalidate_user_cache(self.request_user)
         await publish_user_events('deleted', self.request_user, self.rabbitmq)
 
-    async def cache_delete_handle(self, user_id):
-        cache_key = f'user_profile:{user_id}'
-        await self.redis.delete(cache_key)
-        logger.info(f'Cache with key {cache_key} successfully deleted')
+    async def _cache_get(self, cache_key):
+        try:
+            cached_data = await self.redis.get(cache_key)
+            if cached_data is not None:
+                data = json.loads(cached_data)
+                return data
+        except RedisError as exc:
+            logger.warning('Cache get failed for %s: %s', cache_key, exc)
+
+    async def _cache_set(self, cache_key, data_to_cache, ttl):
+        try:
+            await self.redis.set(cache_key, data_to_cache, ex=ttl)
+        except RedisError as exc:
+            logger.warning('Cache set failed for %s: %s', cache_key, exc)
+
+    async def _invalidate_user_cache(self, user_id):
+        try:
+            cache_key = f'user_profile:{user_id}'
+            await self.redis.delete(cache_key)
+            logger.info(f'Cache with key {cache_key} successfully deleted')
+        except RedisError as exc:
+            logger.warning('Cache invalidation failed for user %s: %s', user_id, exc)
 
 class UserProfileNotFound(Exception):
     pass
