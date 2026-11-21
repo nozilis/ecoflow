@@ -41,7 +41,7 @@ async def test_register_user(
     mock_publish, get_auth_service, mock_db, mock_rabbitmq, make_mock_result, fake_register_user
 ):
     mock_db.execute = AsyncMock(return_value=make_mock_result(None))
-    result = await get_auth_service.register_user(fake_register_user)
+    await get_auth_service.register_user(fake_register_user)
     mock_db.add.assert_called_once()
     mock_db.refresh.assert_called_once()
     create_user = mock_db.add.call_args.args[0]
@@ -64,7 +64,7 @@ async def test_register_user_username_is_already_taken(
 ):
     mock_db.execute = AsyncMock(return_value=make_mock_result(fake_user))
     with pytest.raises(UsernameConflict):
-        result = await get_auth_service.register_user(fake_register_user)
+        await get_auth_service.register_user(fake_register_user)
     mock_db.add.assert_not_called()
     mock_db.commit.assert_not_called()
     mock_db.refresh.assert_not_called()
@@ -76,14 +76,14 @@ async def test_login_user(
 ):
     mock_verify.return_value = True
     mock_db.execute = AsyncMock(return_value=make_mock_result(fake_user))
-    result = await get_auth_service.login_user(fake_login_user)
+    await get_auth_service.login_user(fake_login_user)
     mock_verify.assert_called_once()
 
 
 async def test_login_user_not_found(get_auth_service, mock_db, make_mock_result, fake_login_user):
     mock_db.execute = AsyncMock(return_value=make_mock_result(None))
     with pytest.raises(InvalidUsernameOrPassword):
-        result = await get_auth_service.login_user(fake_login_user)
+        await get_auth_service.login_user(fake_login_user)
 
 
 @patch('services.auth_core.bcrypt.verify')
@@ -93,7 +93,7 @@ async def test_login_user_wrong_password(
     mock_db.execute = AsyncMock(return_value=make_mock_result(fake_user))
     mock_verify.return_value = False
     with pytest.raises(InvalidUsernameOrPassword):
-        result = await get_auth_service.login_user(fake_login_user)
+        await get_auth_service.login_user(fake_login_user)
 
 
 async def test_register_user_integrity_error(

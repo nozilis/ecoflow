@@ -19,7 +19,7 @@ def fake_user_profile_is_exist():
 
 async def test_create_user_profile(get_user_profile_consumer_service, mock_db, make_mock_result):
     mock_db.execute = AsyncMock(return_value=make_mock_result(None))
-    result = await get_user_profile_consumer_service.handle_user_created()
+    await get_user_profile_consumer_service.handle_user_created()
     mock_db.add.assert_called_once()
     created_profile = mock_db.add.call_args.args[0]
     assert created_profile.user_id == 1
@@ -32,6 +32,6 @@ async def test_user_profile_is_exist(
     get_user_profile_consumer_service, mock_db, make_mock_result, fake_user_profile_is_exist
 ):
     mock_db.execute = AsyncMock(return_value=make_mock_result(fake_user_profile_is_exist))
-    result = await get_user_profile_consumer_service.handle_user_created()
+    await get_user_profile_consumer_service.handle_user_created()
     mock_db.add.assert_not_called()
     mock_db.commit.assert_not_called()

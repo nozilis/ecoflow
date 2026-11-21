@@ -14,7 +14,7 @@ def test_expense_with_valid_category():
 
 def test_expense_with_invalid_category():
     with pytest.raises(ValidationError):
-        transaction = TransactionCreate(
+        TransactionCreate(
             amount=1000, transaction_type=TransactionType.EXPENSE, category=IncomeCategory.SALARY
         )
 
@@ -29,7 +29,7 @@ def test_income_with_valid_category():
 
 def test_income_with_invalid_category():
     with pytest.raises(ValidationError):
-        transaction = TransactionCreate(
+        TransactionCreate(
             amount=1000, transaction_type=TransactionType.INCOME, category=ExpenseCategory.PRODUCTS
         )
 

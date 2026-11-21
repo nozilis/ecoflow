@@ -163,7 +163,7 @@ async def test_get_private_user_profile(
 ):
     with pytest.raises(UserProfileNotFound):
         mock_db.execute = AsyncMock(return_value=make_mock_result(fake_private_user_profile))
-        result = await get_user_profile_service.get_user_profile(fake_private_user_profile_id)
+        await get_user_profile_service.get_user_profile(fake_private_user_profile_id)
     mock_redis.get.assert_called_once()
     mock_redis.set.assert_not_called()
 
@@ -173,7 +173,7 @@ async def test_user_profile_not_found(
 ):
     with pytest.raises(UserProfileNotFound):
         mock_db.execute = AsyncMock(return_value=make_mock_result(None))
-        result = await get_user_profile_service.get_user_profile(fake_not_found_user_profile_id)
+        await get_user_profile_service.get_user_profile(fake_not_found_user_profile_id)
     mock_redis.get.assert_called_once()
     mock_redis.set.assert_not_called()
 
@@ -230,7 +230,7 @@ async def test_username_conflict_update_user_profile(
                 make_mock_result(fake_username_taken_user_profile),
             ]
         )
-        result = await get_user_profile_service.update_user_profile(
+        await get_user_profile_service.update_user_profile(
             fake_user_profile_update_request
         )
     mock_redis.delete.assert_not_called()
@@ -253,7 +253,7 @@ async def test_email_conflict_update_user_profile(
                 make_mock_result(fake_email_taken_user_profile),
             ]
         )
-        result = await get_user_profile_service.update_user_profile(
+        await get_user_profile_service.update_user_profile(
             fake_email_user_profile_update_request
         )
     mock_redis.delete.assert_not_called()
@@ -270,6 +270,6 @@ async def test_delete_user(
     fake_owner_user_profile,
 ):
     mock_db.execute = AsyncMock(return_value=make_mock_result(fake_owner_user_profile))
-    result = await get_user_profile_service.delete_user_profile()
+    await get_user_profile_service.delete_user_profile()
     mock_redis.delete.assert_called_once_with('user_profile:1')
     mock_publish.assert_called_once_with('deleted', 1, mock_rabbitmq)

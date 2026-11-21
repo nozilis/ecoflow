@@ -46,7 +46,7 @@ async def test_handle_user_deleted(
     get_transaction_consumer_service, mock_db, mock_redis, make_mock_results, fake_user_transactions
 ):
     mock_db.execute = AsyncMock(return_value=make_mock_results(fake_user_transactions))
-    result = await get_transaction_consumer_service.handle_user_deleted()
+    await get_transaction_consumer_service.handle_user_deleted()
     assert mock_db.delete.call_count == 3
     mock_db.commit.assert_called_once()
     mock_redis.delete.assert_called_once()
@@ -56,7 +56,7 @@ async def test_transactions_not_found(
     get_transaction_consumer_service, mock_db, mock_redis, make_mock_results
 ):
     mock_db.execute = AsyncMock(return_value=make_mock_results([]))
-    result = await get_transaction_consumer_service.handle_user_deleted()
+    await get_transaction_consumer_service.handle_user_deleted()
     mock_db.delete.assert_not_called()
     mock_db.commit.assert_not_called()
     mock_redis.delete.assert_not_called()
