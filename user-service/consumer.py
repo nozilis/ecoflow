@@ -46,7 +46,7 @@ async def run_consumer(handlers: dict[str, callable]):
             durable=True,
             arguments={'x-message-ttl': 5000, 'x-dead-letter-exchange': 'ecoflow_events'},
         )
-        final_dl_queue = await channel.declare_queue('user_service.dl_queue', durable=True)
+        await channel.declare_queue('user_service.dl_queue', durable=True)
 
         for routing_key in handlers:
             await queue.bind(exchange, routing_key=routing_key)
