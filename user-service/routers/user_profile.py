@@ -14,7 +14,7 @@ router = APIRouter(prefix='/user_profile', tags=['user_profile'])
 
 @router.get('/', status_code=status.HTTP_200_OK)
 async def get_user_profile(
-    user_id: int = None,
+    user_id: int | None = None,
     user_profile_service: UserProfileService = Depends(get_user_profile_service),
 ) -> UserProfileResponse:
     try:
