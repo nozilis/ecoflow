@@ -1,6 +1,7 @@
+import logging
+
 from models import Transaction
 from sqlalchemy import select
-import logging
 
 logger = logging.getLogger(__name__)
 

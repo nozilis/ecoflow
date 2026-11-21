@@ -1,6 +1,7 @@
-from models import UserContact, NotificationSettings, NotificationLog
-from sqlalchemy import select
 import logging
+
+from models import NotificationLog, NotificationSettings, UserContact
+from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 

@@ -1,15 +1,16 @@
-from fastapi import APIRouter, HTTPException, status, Depends
-from schemas import UserCreate, UserResponse, UserLogin
+from typing import NewType
+
 from dependencies import get_auth_service, get_current_user
+from fastapi import APIRouter, Depends, HTTPException, status
 from models import User
+from schemas import UserCreate, UserLogin, UserResponse
 from services.auth_core import (
     AuthService,
-    UsernameAndEmailConflict,
-    UsernameConflict,
     EmailConflict,
     InvalidUsernameOrPassword,
+    UsernameAndEmailConflict,
+    UsernameConflict,
 )
-from typing import NewType
 
 AccessToken = NewType('AccessToken', str)
 

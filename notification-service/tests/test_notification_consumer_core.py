@@ -1,7 +1,8 @@
-import pytest
-from services.notification_consumer_core import NotificationConsumerService
 from unittest.mock import AsyncMock
-from models import UserContact, NotificationSettings
+
+import pytest
+from models import NotificationSettings, UserContact
+from services.notification_consumer_core import NotificationConsumerService
 
 
 @pytest.fixture

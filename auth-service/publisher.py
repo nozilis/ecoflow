@@ -1,7 +1,8 @@
-import aio_pika
 import json
-from datetime import datetime
 import logging
+from datetime import datetime
+
+import aio_pika
 
 logger = logging.getLogger(__name__)
 

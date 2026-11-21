@@ -1,7 +1,8 @@
-import pytest
 from unittest.mock import AsyncMock
-from services.user_profile_consumer_core import UserProfileConsumerService
+
+import pytest
 from models import UserProfile
+from services.user_profile_consumer_core import UserProfileConsumerService
 
 
 @pytest.fixture

@@ -1,10 +1,11 @@
-from models import MonthlyStats
-from sqlalchemy import select, func
-from datetime import datetime
-from schemas import MonthlyStatsResponse, YearlyStatsResponse, RangeStatsResponse
-from redis.exceptions import RedisError
-import logging
 import json
+import logging
+from datetime import datetime
+
+from models import MonthlyStats
+from redis.exceptions import RedisError
+from schemas import MonthlyStatsResponse, RangeStatsResponse, YearlyStatsResponse
+from sqlalchemy import func, select
 
 logger = logging.getLogger(__name__)
 

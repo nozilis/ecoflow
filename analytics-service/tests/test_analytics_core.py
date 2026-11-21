@@ -1,8 +1,9 @@
-import pytest
-from unittest.mock import AsyncMock, MagicMock
-from services.analytics_core import AnalyticsService
-from models import MonthlyStats
 import json
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+from models import MonthlyStats
+from services.analytics_core import AnalyticsService
 
 
 @pytest.fixture

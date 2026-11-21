@@ -1,9 +1,10 @@
-import pytest
-from unittest.mock import AsyncMock
-from services.transaction_consumer_core import TransactionConsumerService
-from models import Transaction
-from enums import TransactionType, IncomeCategory, ExpenseCategory
 from datetime import datetime
+from unittest.mock import AsyncMock
+
+import pytest
+from enums import ExpenseCategory, IncomeCategory, TransactionType
+from models import Transaction
+from services.transaction_consumer_core import TransactionConsumerService
 
 
 @pytest.fixture

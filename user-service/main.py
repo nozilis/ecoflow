@@ -1,10 +1,11 @@
-from fastapi import FastAPI
-from contextlib import asynccontextmanager
-from database import engine
-from routers import user_profile
-from redis_client import redis_pool
-from rabbitmq_client import get_rabbitmq_connection
 import logging
+from contextlib import asynccontextmanager
+
+from database import engine
+from fastapi import FastAPI
+from rabbitmq_client import get_rabbitmq_connection
+from redis_client import redis_pool
+from routers import user_profile
 
 logger = logging.getLogger(__name__)
 

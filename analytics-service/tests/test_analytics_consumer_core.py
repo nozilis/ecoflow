@@ -1,8 +1,9 @@
-import pytest
-from unittest.mock import AsyncMock, patch
-from services.analytics_consumer_core import AnalyticsConsumerService
-from models import MonthlyStats, UserBudget, BudgetExceedNotification
 from datetime import datetime
+from unittest.mock import AsyncMock, patch
+
+import pytest
+from models import BudgetExceedNotification, MonthlyStats, UserBudget
+from services.analytics_consumer_core import AnalyticsConsumerService
 
 
 @pytest.fixture

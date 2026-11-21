@@ -1,6 +1,7 @@
-import aio_pika
 import json
 import logging
+
+import aio_pika
 
 logger = logging.getLogger(__name__)
 

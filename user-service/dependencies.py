@@ -1,14 +1,15 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from database import async_session_maker
-from typing import AsyncGenerator
-from fastapi.security import OAuth2PasswordBearer
-from jose import jwt, JWTError
-from decouple import config
-from fastapi import HTTPException, status, Depends, Request
-from services.user_profile_core import UserProfileService
-from redis.asyncio import Redis
-from aio_pika import RobustConnection
 import logging
+from collections.abc import AsyncGenerator
+
+from aio_pika import RobustConnection
+from database import async_session_maker
+from decouple import config
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
+from redis.asyncio import Redis
+from services.user_profile_core import UserProfileService
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 

@@ -1,15 +1,16 @@
-import pytest
-from unittest.mock import AsyncMock, patch, call
-from services.user_profile_core import (
-    UserProfileService,
-    UserProfileNotFound,
-    UsernameConflict,
-    EmailConflict,
-)
-from models import UserProfile
-from enums import VisibilityChoice
-from schemas import UserProfileUpdate
 import json
+from unittest.mock import AsyncMock, call, patch
+
+import pytest
+from enums import VisibilityChoice
+from models import UserProfile
+from schemas import UserProfileUpdate
+from services.user_profile_core import (
+    EmailConflict,
+    UsernameConflict,
+    UserProfileNotFound,
+    UserProfileService,
+)
 
 
 @pytest.fixture

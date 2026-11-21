@@ -1,6 +1,6 @@
-from fastapi import APIRouter, status, Depends
-from dependencies import get_analytics_service, get_redis
-from schemas import MonthlyStatsResponse, YearlyStatsResponse, RangeStatsResponse
+from dependencies import get_analytics_service
+from fastapi import APIRouter, Depends, status
+from schemas import MonthlyStatsResponse, RangeStatsResponse, YearlyStatsResponse
 from services.analytics_core import AnalyticsService
 
 router = APIRouter(prefix='/analytics', tags=['analytics'])

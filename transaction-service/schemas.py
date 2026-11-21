@@ -1,16 +1,17 @@
-from pydantic import BaseModel, model_validator, ConfigDict
-from typing import Optional, Self
-from enums import TransactionType, ExpenseCategory, IncomeCategory
 from datetime import datetime
+from typing import Self
+
+from enums import ExpenseCategory, IncomeCategory, TransactionType
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class TransactionCreate(BaseModel):
     amount: int
     transaction_type: TransactionType
-    category: Optional[ExpenseCategory | IncomeCategory] = (
+    category: ExpenseCategory | IncomeCategory | None = (
         None  # Union enum classes for typification
     )
-    description: Optional[str] = None
+    description: str | None = None
 
     @model_validator(mode='after')
     def check_category_type(self) -> Self:
@@ -36,12 +37,12 @@ class TransactionResponse(BaseModel):
     amount: int
     transaction_type: TransactionType
     category: ExpenseCategory | IncomeCategory
-    description: Optional[str] = None
+    description: str | None = None
     created_at: datetime
 
 
 class TransactionUpdate(BaseModel):
-    amount: Optional[int] = None
-    transaction_type: Optional[TransactionType] = None
-    category: Optional[ExpenseCategory | IncomeCategory] = None
-    description: Optional[str] = None
+    amount: int | None = None
+    transaction_type: TransactionType | None = None
+    category: ExpenseCategory | IncomeCategory | None = None
+    description: str | None = None

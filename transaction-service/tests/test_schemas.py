@@ -1,7 +1,7 @@
 import pytest
-from schemas import TransactionCreate
 from enums import ExpenseCategory, IncomeCategory, TransactionType
 from pydantic import ValidationError
+from schemas import TransactionCreate
 
 
 def test_expense_with_valid_category():

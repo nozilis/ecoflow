@@ -1,12 +1,13 @@
-import aio_pika
 import asyncio
 import json
-from database import async_session_maker
-from sqlalchemy.ext.asyncio import AsyncSession
-from services.notification_consumer_core import NotificationConsumerService
-from rabbitmq_client import get_rabbitmq_connection
 import logging
 import signal
+
+import aio_pika
+from database import async_session_maker
+from rabbitmq_client import get_rabbitmq_connection
+from services.notification_consumer_core import NotificationConsumerService
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ async def run_consumer(handlers: dict[str, callable]):
         )
         final_dl_queue = await channel.declare_queue('notification_service.dl_queue', durable=True)
 
-        for routing_key in handlers.keys():
+        for routing_key in handlers:
             await queue.bind(exchange, routing_key=routing_key)
             await dl_queue.bind(dl_exchange, routing_key=routing_key)
 

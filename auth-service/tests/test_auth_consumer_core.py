@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 from services.auth_consumer_core import AuthConsumerService
 
 

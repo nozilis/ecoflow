@@ -1,6 +1,7 @@
+import logging
+
 from models import User
 from sqlalchemy import select
-import logging
 
 logger = logging.getLogger(__name__)
 

@@ -1,12 +1,12 @@
-from fastapi import APIRouter, Depends, status, HTTPException
 from dependencies import get_user_profile_service
+from fastapi import APIRouter, Depends, HTTPException, status
 from schemas import UserProfileResponse, UserProfileUpdate
 from services.user_profile_core import (
-    UserProfileService,
-    UserProfileNotFound,
-    UsernameConflict,
     EmailConflict,
     UsernameAndEmailConflict,
+    UsernameConflict,
+    UserProfileNotFound,
+    UserProfileService,
 )
 
 router = APIRouter(prefix='/user_profile', tags=['user_profile'])

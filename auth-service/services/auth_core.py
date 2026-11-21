@@ -1,11 +1,12 @@
-from passlib.hash import bcrypt
-from models import User
-from sqlalchemy import select, or_
-from publisher import publish_user_events
-from sqlalchemy.exc import IntegrityError
-from schemas import UserResponse
-from jwt_token import create_access_token
 import logging
+
+from jwt_token import create_access_token
+from models import User
+from passlib.hash import bcrypt
+from publisher import publish_user_events
+from schemas import UserResponse
+from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
 

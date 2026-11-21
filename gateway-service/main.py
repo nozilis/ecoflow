@@ -1,8 +1,9 @@
 import asyncio
-from fastapi import FastAPI, Request, Response, status, HTTPException
-import httpx
 import logging
 from contextlib import asynccontextmanager
+
+import httpx
+from fastapi import FastAPI, HTTPException, Request, Response, status
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ async def gateway_proxy(request: Request, path: str):
             ),
             timeout=5.0,
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.warning('Request response timeout')
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT, detail=('Request response timeout')

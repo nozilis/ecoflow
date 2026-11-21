@@ -1,6 +1,6 @@
-from pydantic import BaseModel, ConfigDict
+
 from enums import VisibilityChoice
-from typing import Optional
+from pydantic import BaseModel, ConfigDict
 
 
 class UserProfileResponse(BaseModel):
@@ -17,11 +17,11 @@ class UserProfileResponse(BaseModel):
 
 
 class UserProfileUpdate(BaseModel):
-    username: Optional[str] = None
-    email: Optional[str] = None
-    avatar: Optional[str] = None
-    budget_limit: Optional[int] = None
-    social_links: Optional[dict] = None
-    visibility_choice: Optional[VisibilityChoice] = None
-    monthly_budget_exceeded_notification: Optional[bool] = None
-    weekly_summary_notification: Optional[bool] = None
+    username: str | None = None
+    email: str | None = None
+    avatar: str | None = None
+    budget_limit: int | None = None
+    social_links: dict | None = None
+    visibility_choice: VisibilityChoice | None = None
+    monthly_budget_exceeded_notification: bool | None = None
+    weekly_summary_notification: bool | None = None

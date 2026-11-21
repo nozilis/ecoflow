@@ -1,13 +1,14 @@
-import pytest
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from schemas import UserCreate, UserLogin
 from services.auth_core import (
     AuthService,
-    UsernameConflict,
     InvalidUsernameOrPassword,
     UsernameAndEmailConflict,
+    UsernameConflict,
 )
-from schemas import UserCreate, UserLogin
-from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 

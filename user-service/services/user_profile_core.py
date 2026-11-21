@@ -1,12 +1,13 @@
-from models import UserProfile
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
-from enums import VisibilityChoice
-from publisher import publish_user_events
-from schemas import UserProfileResponse
-from redis.exceptions import RedisError
 import json
 import logging
+
+from enums import VisibilityChoice
+from models import UserProfile
+from publisher import publish_user_events
+from redis.exceptions import RedisError
+from schemas import UserProfileResponse
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
 

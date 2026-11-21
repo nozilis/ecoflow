@@ -1,14 +1,12 @@
 import asyncio
+import os
 from logging.config import fileConfig
 
-import os
+from alembic import context
+from decouple import Config, RepositoryEnv
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-
-from alembic import context
-
-from decouple import Config, RepositoryEnv
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 env_config = Config(RepositoryEnv(os.path.join(BASE_DIR, '.env')))
