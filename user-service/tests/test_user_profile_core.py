@@ -230,9 +230,7 @@ async def test_username_conflict_update_user_profile(
                 make_mock_result(fake_username_taken_user_profile),
             ]
         )
-        await get_user_profile_service.update_user_profile(
-            fake_user_profile_update_request
-        )
+        await get_user_profile_service.update_user_profile(fake_user_profile_update_request)
     mock_redis.delete.assert_not_called()
 
 
@@ -253,9 +251,7 @@ async def test_email_conflict_update_user_profile(
                 make_mock_result(fake_email_taken_user_profile),
             ]
         )
-        await get_user_profile_service.update_user_profile(
-            fake_email_user_profile_update_request
-        )
+        await get_user_profile_service.update_user_profile(fake_email_user_profile_update_request)
     mock_redis.delete.assert_not_called()
 
 

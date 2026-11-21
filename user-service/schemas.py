@@ -1,4 +1,3 @@
-
 from enums import VisibilityChoice
 from pydantic import BaseModel, ConfigDict
 

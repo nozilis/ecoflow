@@ -18,8 +18,8 @@ async def get_monthly_stats(
 
 @router.get('/yearly_stats', status_code=status.HTTP_200_OK)
 async def get_yearly_stats(
-    year: int | None = None, 
-    analytics_service: AnalyticsService = Depends(get_analytics_service)
+    year: int | None = None,
+    analytics_service: AnalyticsService = Depends(get_analytics_service),
 ) -> list[YearlyStatsResponse]:
     yearly_stats = await analytics_service.get_yearly_stats(year=year)
     return yearly_stats

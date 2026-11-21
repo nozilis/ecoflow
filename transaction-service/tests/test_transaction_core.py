@@ -126,7 +126,8 @@ async def test_invalid_update_transaction(
     with pytest.raises(TransactionNotFound):
         mock_db.execute = AsyncMock(return_value=make_mock_result(None))
         await get_transaction_service.update_transaction(
-            10, fake_transaction_update_request
+            10,
+            fake_transaction_update_request,
         )
 
 
@@ -140,5 +141,6 @@ async def test_invalid_category_transacton_update(
     with pytest.raises(InvalidCategory):
         mock_db.execute = AsyncMock(return_value=make_mock_result(fake_transaction))
         await get_transaction_service.update_transaction(
-            1, fake_invalid_transaction_update_request
+            1,
+            fake_invalid_transaction_update_request,
         )

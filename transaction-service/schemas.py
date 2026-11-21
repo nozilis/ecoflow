@@ -8,9 +8,7 @@ from pydantic import BaseModel, ConfigDict, model_validator
 class TransactionCreate(BaseModel):
     amount: int
     transaction_type: TransactionType
-    category: ExpenseCategory | IncomeCategory | None = (
-        None  # Union enum classes for typification
-    )
+    category: ExpenseCategory | IncomeCategory | None = None  # Union enum classes for typification
     description: str | None = None
 
     @model_validator(mode='after')
